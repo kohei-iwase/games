@@ -9,11 +9,13 @@ model: sonnet
 ## 1. 使える状態か確認する
 
 ```sh
+export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 command -v codex || npm install -g @openai/codex
-test -n "$OPENAI_API_KEY" && echo "key ok"
+codex login status
 ```
 
-- `OPENAI_API_KEY` が空なら、Codex は実行せずに「環境の設定で `OPENAI_API_KEY` の登録が必要」と報告して終える。
+- 1行目は nvm 経由の Node を非対話シェルでも使うためのもの。
+- `codex login status` が `Logged in` で始まる出力を返さなければ（未ログイン、または `OPENAI_API_KEY` 環境変数もない場合）、Codex は実行せずに「`codex login --with-api-key` によるログインが必要」と報告して終える。APIキーの値を表示・要求・記録しない。
 - インストールや API への接続に失敗した場合（`api.openai.com` が許可されていないなど）も、エラー出力を添えて報告して終える。
 - Codex が使えないときに、自分で代わりに実装しない。
 
@@ -25,6 +27,7 @@ test -n "$OPENAI_API_KEY" && echo "key ok"
 codex exec --full-auto ${CODEX_MODEL:+-m "$CODEX_MODEL"} "<依頼内容>"
 ```
 
+- Bash 呼び出しごとにシェルが新しくなる場合は、同じコマンド行の先頭で nvm の読み込み（上の1行目）を繰り返す。
 - モデルは環境変数 `CODEX_MODEL` で指定できる。未設定なら Codex の既定モデルを使う。
 - サンドボックスや承認を無効にするオプション（`--dangerously-bypass-approvals-and-sandbox` など）は使わない。
 - 長い作業は分割して、1回の依頼を1つの変更にとどめる。

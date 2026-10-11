@@ -26,10 +26,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 方針が決まった実装、テストの追加と実行 | `implementer` | Sonnet |
 | 設計・バランス・仕様の深い検討（セカンドオピニオン） | `advisor` | Opus |
 | OpenAI Codex による実装（ユーザーが指定したとき、別モデルの案を比べたいとき） | `codex` | Codex CLI（操作役は Sonnet） |
+| 世界観・キャラクター設定の草案（ユーザーが設定の作成を頼んだとき） | `lorekeeper` | Codex CLI（操作役は Sonnet） |
+| キャラクター画像など画像の生成（ユーザーが画像の作成を頼んだとき） | `illustrator` | OpenAI 画像生成API（操作役は Sonnet） |
 
 - 複数ファイルにまたがる調査は、自分で読み回らず `searcher` に任せる。
 - 実装は、変更箇所と仕様を明確にしてから `implementer` に渡す。返ってきた差分とテスト結果は自分で確認してからコミットする。
 - `codex` には、ユーザーが Codex・GPT 系モデルを指定したときだけ任せる。既定の実装担当は `implementer`。`codex` を使うには、Codex CLI（Node 16以上。nvm で導入した Node 22 を使う）をインストールし、APIキーでログイン済みにしておく（`printenv OPENAI_API_KEY | codex login --with-api-key` のように標準入力で渡す。状態確認は `codex login status`）。`api.openai.com` への通信も許可しておく。モデルは環境変数 `CODEX_MODEL` で指定できる。APIキーをファイルやチャットに書かない。
+- `lorekeeper` の草案は `kaijo-minnezang/docs/setting/` に置き、採用するかはユーザーが決める。`illustrator` の画像は `kaijo-minnezang/art/` に置く。画像生成は枚数に応じて課金されるため、1回の依頼は最大2枚にする。`illustrator` は、APIキーをキーチェーン（サービス名 `openai-api-key`）から読む。
 - 1〜2行の修正や、すでに開いているファイルの小さな変更は、委任せずに直接行ってよい。
 - ユーザーとの相談、仕様の決定、コミット・プッシュはメインの会話で行う。
 
