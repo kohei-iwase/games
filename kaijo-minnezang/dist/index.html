@@ -65,5 +65,12 @@
 
 <!-- ドラマ（プロローグ・エピローグ） -->
 <div id="story" class="story" hidden role="dialog" aria-modal="false" aria-labelledby="storyTitle"><div class="story-card"><div class="eyebrow" id="storyPlace"></div><div class="story-head"><h2 id="storyTitle"></h2><div class="story-rank" id="storyRank" hidden></div></div><p class="story-note" id="storyNote"></p><div class="story-lines" id="storyLines"></div><dl class="story-stats" id="storyStats" hidden></dl><ul class="story-hints" id="storyHints"></ul><div class="story-actions"><button class="primary" id="storyGo"></button><button class="secondary" id="storyClose">戦場を見る</button></div></div></div>
+
+<!-- 物語パート：立ち絵の会話（story.mjs の台本を talk.mjs が再生） -->
+<div id="talk" class="talk" hidden role="dialog" aria-label="会話"><div class="talk-figures" id="talkFigures"><div class="talk-slot" data-pos="left"><div class="talk-fig"><img alt=""></div></div><div class="talk-slot" data-pos="center"><div class="talk-fig"><img alt=""></div></div><div class="talk-slot" data-pos="right"><div class="talk-fig"><img alt=""></div></div></div>
+<div class="talk-box narr" id="talkBox"><div class="talk-name" id="talkName" hidden></div><p class="talk-text" id="talkText"></p><span class="talk-next" id="talkNext" hidden aria-hidden="true">▼</span></div>
+<div class="talk-tools"><button class="secondary" id="talkLog">ログ</button><button class="secondary" id="talkSkip">スキップ ›</button></div>
+<div class="talk-fade" id="talkFade"></div><div class="talk-flash" id="talkFlash" aria-hidden="true"></div>
+<div class="talk-logview" id="talkLogView" hidden role="dialog" aria-modal="true" aria-label="会話のログ"><div class="talk-logcard"><div class="talk-loghead"><b>ログ</b><button class="secondary" id="talkLogClose">閉じる ［Esc］</button></div><div class="talk-loglist" id="talkLogList"></div></div></div></div>
 </main>
 <script type="module" src="./app.mjs"></script></body></html>

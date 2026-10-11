@@ -52,6 +52,7 @@ node tests/combat.mjs       # 戦闘ルール（Battle）、難易度（現在�
 node tests/campaign.mjs     # エピローグ・助言・記録保存（localStorageはテスト内でモック）
 node tests/geometry3d.mjs   # カメラ・座標の往復変換、メッシュの有限値。/tmp/minnezang-3d-scene.json を出力
 node tests/strategy.mjs     # 戦略マップ（艦隊の移動・接触・戦闘の受け渡し・勝敗）と自動の通しプレイ
+node tests/story.mjs        # 台本（dist/story/*.txt）の読み込み：命令の種類と件数、名前の解決、感情→動き、警告
 ```
 
 追加環境が必要なテスト：
@@ -67,6 +68,7 @@ node tests/strategy.mjs     # 戦略マップ（艦隊の移動・接触・戦�
 - `campaign.mjs`：プロローグ、戦闘結果に応じたエピローグと助言、`localStorage` への記録保存。
 - `config.mjs`：視点・自動ポーズ（`pauseMode`：`events`／`none`）・ジョスト入力補助・カットイン短縮の設定を `localStorage` に保存し、`applyConfig` で `Battle` に反映する。`Battle.autoPause` が false のとき `queuePause` はポーズせず `notice` に通知を残す（手動の `pause()` は常に有効）。旗艦は `battle.mjs` の `FLAGSHIP`（内部IDは `lance`、表示名はミラルカ辺境伯）。
 - `strategy.mjs`：DOM非依存の戦略マップのルール（`Strategy` クラス）。艦隊・敵艦隊の移動、浅瀬・小島、補給、接触、勝敗を持ち、接触した戦闘は `battleOptions` で `battle.mjs` の `Battle` に渡し、`applyBattle` で結果（hp・撃破・押し戻し）を戻す。依存方向は `strategy.mjs` → `battle.mjs`。画面はまだない。
+- `story.mjs`：DOM非依存の台本パーサ（`parseScript`、`loadScript`）。書式は `docs/story-format.md`。`talk.mjs` が命令列を会話画面（立ち絵・名前の札・演出・ログ）に再生し、`app.mjs` が3場面（プロローグ・ネフェリム初接触・峰の灯の幕間）を差し込む。再生済みは `Strategy.seen`。
 - `space3d.mjs`：行列演算、カメラ（`cameraState`）、論理座標から3Dへの変換（`world(x,y,h)` は `[x-500, h, y-325]`）、画面座標から海面へのレイ交差（`groundPoint`）、手続き生成メッシュ（`meshes`）。
 - `scene3d.mjs`：`buildScene(battle, ...)` で Battle の状態から描画用のモデル一覧を作る純粋関数。`bloodTexture` で血域濃度をテクスチャ化する。
 - `shaders3d.mjs`：GLSL文字列（照明・海面の波・血域）。WebGL版（`render3d.mjs`）とネイティブEGL版（`native3d.py`）が同じシェーダーを使う。
