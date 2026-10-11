@@ -115,7 +115,7 @@ body[data-mode="cutin"] .hud-tr{opacity:0}
 .cutin-edge{position:absolute;inset:0 auto 0 0;width:calc(var(--cp) + 8px);filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px var(--cutin-color));pointer-events:none}.cutin-flash{position:absolute;inset:0;background:#fff;clip-path:polygon(calc(100% - 16px) 0,100% 0,calc(62% + 3px) 100%,calc(62% - 5px) 100%);transform-origin:top}
 .cutin-star{position:absolute;left:calc(var(--cp) * .975);top:10%;font-size:clamp(30px,4.4vw,58px);line-height:1;color:#fff;text-shadow:0 0 24px #fff,0 0 40px var(--cutin-color);transform:translate(-50%,-50%)}
 .cutin-text{position:absolute;left:calc(var(--cp) * .8);right:5%;top:50%;transform:translateY(-50%);text-shadow:0 2px 0 #000,0 0 18px #000}
-.cutin-knight{display:inline-block;padding:3px 12px;font:800 11px/1 var(--sans);letter-spacing:.2em;color:#0a1620;background:var(--cutin-color);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);text-shadow:none}
+.cutin-knight{display:inline-block;padding:3px 12px;font:800 11px/1 var(--sans);letter-spacing:.2em;color:var(--cutin-ink,#0a1620);background:var(--cutin-color);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);text-shadow:none}
 .cutin h2{margin:8px 0 6px;font:900 italic clamp(22px,3.6vw,46px)/1 var(--sans);letter-spacing:.06em;color:#fff;-webkit-text-stroke:1px color-mix(in srgb,var(--cutin-color) 70%,#fff)}
 .cutin p{margin:0;font:600 clamp(10.5px,1.2vw,14px)/1.45 var(--serif);color:#f1ece0}
 .cutin-count{position:absolute;right:14px;top:12px;font:800 12px/1 var(--sans);letter-spacing:.2em;color:#ffffffaa}
