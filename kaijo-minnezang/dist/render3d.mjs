@@ -42,7 +42,7 @@ export class SeaRenderer {
   for(const s of b.ships){const p=at(s.x,s.y,113);if(!p)continue;p.x=clamp(p.x,65,w-65);p.y=clamp(p.y,45,h-40);pill(`${s.name} · 血${Math.floor(s.blood)}`,p,s.hp>0?s.color:'#9ba2a7',selected===s.id?13:11);c.fillStyle='#112632';c.fillRect(p.x-42,p.y+14,84,4);c.fillStyle=s.hp/s.maxHp<.3?'#f77d99':s.color;c.fillRect(p.x-42,p.y+14,84*s.hp/s.maxHp,4);if(b.protected(s))pill('防護 · 押し戻し無効',{x:p.x,y:p.y+35,depth:0},'#aed6ff',10);}
   const e=b.enemy;const ep=at(e.x,e.y,240);pill(e.hp<=0?'ネフェリム撃破':e.form===2?'ネフェリム · 第二形態':'ネフェリム',ep,'#f2b0bf',13);
   if(e.rootUntil>b.time)pill(`血海拘束 ${(e.rootUntil-b.time).toFixed(1)}s`,at(e.x,e.y,212),'#f3a4cd',11);
-  if(e.attack)pill(`薙ぎ払い ${(e.attack.duration-e.attack.age).toFixed(1)}s`,at(e.x-100,e.y,10),'#ffb2bd',12);
+  if(e.attack)pill(`${e.attack.type==='slam'?'血潮の墜落':'薙ぎ払い'} ${(e.attack.duration-e.attack.age).toFixed(1)}s`,e.attack.type==='slam'?at(e.attack.x,e.attack.y+e.attack.range,10):at(e.x-100,e.y,10),'#ffb2bd',12);
   if(b.joust){const s=b.ship('lance');pill(`JOUST · ${Math.round(b.joust.speed)}`,at(s.x,s.y,142),'#ffe0a0',12);}
   for(const f of b.effects.filter(f=>f.type==='label')){c.globalAlpha=Math.min(1,(1-f.age/f.life)*2);pill(f.text,at(f.x,f.y,70+f.age*24),f.color,13);}c.globalAlpha=1;
   const rally=b.pending==='rally'?b.pendingRally:b.order==='rally'?b.rally:null;if(rally)pill('集合地点',at(rally.x,rally.y,15),'#f4dc9b',11);
