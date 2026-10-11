@@ -5,15 +5,17 @@ import {FLEET_COLOR,shipMaxHp} from './mapscene3d.mjs';
 import {SeaRenderer} from './render3d.mjs';
 import {loadConfig,saveConfig,applyConfig} from './config.mjs';
 import {createAudio} from './audio.mjs';
+import {loadScript} from './story.mjs';
+import {createTalk} from './talk.mjs';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let renderer=null;try{renderer=new SeaRenderer($('#sea'),{reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});}catch(error){$('#renderError').hidden=false;$('#renderError').textContent=error.message;}
 const config=loadConfig();
 if(renderer){renderer.setView(config.view);$('#viewMode').value=renderer.view}$('#skipBattle').checked=config.skipBattle;$('#autoTiming').checked=config.autoTiming;$('#shortCutin').checked=config.shortCutin;
 const audio=createAudio();audio.setEnabled(config.sound);audio.setVolume(config.volume);$('#sound').checked=config.sound;$('#volume').value=config.volume;
-// 全体の流れ。story=プロローグ／エピローグのドラマ画面、phase=map（戦略マップ）／prep（出撃準備）／watch（観戦）／summary（サマリー）／result（結果）。
+// 全体の流れ。story=エピローグのドラマ画面（プロローグ・接触・幕間の会話は talk が重ねて再生する）、phase=map（戦略マップ）／prep（出撃準備）／watch（観戦）／summary（サマリー）／result（結果）。
 // 戦略マップの進行は st（Strategy）、接触した戦闘は enc（st.encounter）と b（Battle）が持つ。
 const TICK=.025,FAST=20,SPEEDS=[1,2,4];
-let story='prologue',phase=null,report=null,newBest=false,cutinKey='';
+let story=null,phase='map',report=null,newBest=false,cutinKey='';
 let st=new Strategy(),history=[],enc=null,fleetSel='main',mapSpeed=1,contactAt=0,finishAt=0,fleetKey='',mapLogKey=null,hintKey='',pPaused=true;
 let lastRep=null,sumLog=[],sumSeen=0,endAt=0,predTimer=0,predToken=0,predResult=null,storyKey='',judgeKey='',sumKey='';
 const options=()=>st.battleOptions(enc);
@@ -28,7 +30,9 @@ function build(){ $('#shipList').innerHTML=b.ships.map(s=>`<button class="member
 // 流れの切り替え。newGame=最初から、toMap=戦略マップ（ポーズ状態）、toPrep=接触した戦闘の出撃準備、launch=出撃（観戦／サマリー／完全スキップ）、toResult=結果、backToMap=戦闘の結果を戦略へ反映、finish=戦略の決着。
 function newGame(){st=new Strategy();history=[];fleetSel='main';mapSpeed=1;report=null;toMap()}
 function toMap(){story=null;phase='map';enc=null;contactAt=0;finishAt=0;fleetKey='';mapLogKey=null;st.paused=true;$('#contact').hidden=true;ui()}
-function toPrep(){enc=st.encounter;story=null;phase='prep';report=null;$('#contact').hidden=true;b=newBattle();acc=0;lastLog=-1;build();prepUI();schedulePredict();ui()}
+function toPrep(){enc=st.encounter;story=null;phase='prep';report=null;$('#contact').hidden=true;b=newBattle();acc=0;lastLog=-1;build();prepUI();schedulePredict();ui();if(enc.enemyId==='nephilim'&&!st.seen.contact){st.seen.contact=true;scene('contact-nephilim',ui)}}
+// 物語の場面（story/名前.txt）を会話で再生し、終わったら done を呼ぶ。台本が読めなければそのまま done。
+function scene(name,done){talk.begin();loadScript(name).then(c=>talk.play(c,done),e=>{console.warn(e.message);talk.abort();done?.()})}
 function launch(kind){if(kind==='skip'){toResult(simulate(options(),{joustPolicy:'normal'}));return}b=newBattle();b.start();phase=kind;sumLog=[];sumSeen=0;sumKey='';judgeKey='';endAt=0;acc=0;lastLog=-1;build();ui()}
 function toSummary(){if(phase!=='watch')return;if(b.mode==='paused')b.resume();phase='summary';sumLog=[];sumSeen=0;sumKey='';ui()}
 function toResult(rep){phase='result';lastRep=rep;endAt=0;resultUI();ui()}
@@ -81,8 +85,8 @@ let pb=null,pMode='',pCutin='',pRoot=0,pLunge=false,pImpact=0,lastHeart=0,pHit={
 // 姫の心臓は見せず、被弾と危機を画面の揺れと「ドクン」と縮む動きで間接的に表す（動きを減らす設定ではCSS側で止まる）。
 const stage=$('.stage');function screenFx(k){if(!stage?.classList)return;stage.classList.remove(k);void stage.offsetWidth;stage.classList.add(k)}
 function sound(){const map=phase==='map',battle=phase==='watch'||phase==='summary'||phase==='prep';
- audio.music(story||phase==='result'?'drama':!battle||phase==='prep'||b.enemyKind==='kin'?'march':b.enemy.form===2?'waltz2':'waltz');audio.duck((map?st.paused:b.mode==='paused')||$('#help').open);
- if(map){if(st.paused!==pPaused&&!st.encounter&&!st.result&&!contactAt&&!finishAt)audio.sfx('bell');pPaused=st.paused;pb=null;return}
+ audio.music(story||talk.active||phase==='result'?'drama':!battle||phase==='prep'||b.enemyKind==='kin'?'march':b.enemy.form===2?'waltz2':'waltz');audio.duck(!talk.active&&((map?st.paused:b.mode==='paused')||$('#help').open));
+ if(map){if(st.paused!==pPaused&&!talk.active&&!st.encounter&&!st.result&&!contactAt&&!finishAt)audio.sfx('bell');pPaused=st.paused;pb=null;return}
  if(!battle)return;
  const e=b.enemy,fl=b.flag(),ck=b.mode==='cutin'&&b.cutin?`${b.cutin.index}:${b.cutin.ids[b.cutin.index]}`:'',lunge=!!b.ship('lance')?.lunge,imp=Math.max(0,...b.effects.filter(f=>f.type==='impact').map(f=>f.id));
  if(pb===b){if(b.mode!==pMode&&(b.mode==='paused'||b.mode==='ended'))audio.sfx('bell');if(ck&&ck!==pCutin)audio.sfx('cutin');if(e.rootUntil>pRoot)audio.sfx('stake');if(lunge&&!pLunge)audio.sfx('cross');if(imp>pImpact)audio.sfx('hit');
@@ -91,7 +95,7 @@ function sound(){const map=phase==='map',battle=phase==='watch'||phase==='summar
  for(const s of b.ships)pHit[s.id]=s.hitUntil;
  pb=b;pMode=b.mode;pCutin=ck;pRoot=e.rootUntil;pLunge=lunge;pImpact=imp}
 function ui(){storyUI();flowUI();sound();const map=inMap(),body=document.body;
- if(body){body.dataset.view=map?'map':'battle';body.dataset.mode=map?(st.paused?'paused':'running'):b.mode;body.dataset.phase=phase||'';body.dataset.threat=!map&&b.enemy.attack&&b.mode!=='ended'?'on':'';body.dataset.story=story||phase==='prep'||phase==='result'?'on':''}
+ if(body){body.dataset.view=map?'map':'battle';body.dataset.mode=map?(st.paused?'paused':'running'):b.mode;body.dataset.phase=phase||'';body.dataset.threat=!map&&b.enemy.attack&&b.mode!=='ended'?'on':'';body.dataset.story=story||phase==='prep'||phase==='result'?'on':'';body.dataset.talk=talk.active?'on':''}
  const hint=map?'ドラッグ：視点移動 ／ ホイール：ズーム ／ 艦隊をクリックで選択、海面をクリックで移動 ／ Space：進行・戦術ポーズ':'ドラッグ：旋回 ／ ホイール：ズーム ／ Space：一時停止・再開 ／ F：ジョスト射出';if(hint!==hintKey){hintKey=hint;$('#cameraHint').textContent=hint}
  if(map)mapUI();else battleUI()}
 // 戦略マップのHUD：ネフェリムと峰の灯の耐久、経過時間、艦隊一覧、ログ、操作ボタン。
@@ -138,6 +142,7 @@ function drawMapChart(){if(!chartCtx)return;const dpr=Math.min(2,window.devicePi
 }
 // Phones play in landscape. Android allows locking only in fullscreen; iOS ignores it and the CSS rotate hint covers portrait.
 const touch=window.matchMedia('(pointer: coarse)').matches;
+const talk=createTalk({root:$('#talk'),stage:$('.stage'),audio,shake:()=>screenFx('fx-hit'),onTap:()=>landscape()});
 function landscape(){if(!touch||document.fullscreenElement||!document.documentElement?.requestFullscreen)return;document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation?.lock?.('landscape')).catch(()=>{})}
 $('#storyGo').onclick=()=>{landscape();newGame()};$('#resetBtn').onclick=newGame;$('#prepGo').onclick=()=>{landscape();launch('watch')};$('#prepSummary').onclick=()=>{landscape();launch('summary')};$('#prepSkip').onclick=()=>launch('skip');$('#resultGo').onclick=backToMap;$('#pauseBtn').onclick=play;$('#toSummary').onclick=toSummary;
 $('#prepFormations').onclick=ev=>{const el=ev.target.closest('[data-form]');if(!el)return;fleetOf().formation=el.dataset.form;prepChanged()};$('#prepSkills').onclick=ev=>{const el=ev.target.closest('[data-skill]');if(!el)return;const o=fleetOf().skillOrder,i=o.indexOf(el.dataset.skill);if(i>=0)o.splice(i,1);else o.push(el.dataset.skill);prepChanged()};
@@ -160,13 +165,15 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){if(b.mode=
 function mapFrame(now,dt){
  if(st.encounter){if(!contactAt){contactAt=now+1500;banner(st.log[0].text)}else if(now>=contactAt)toPrep();return}
  if(st.result){if(!finishAt){finishAt=now+1800;banner(st.reason)}else if(now>=finishAt)finish();return}
- if(st.paused||document.hidden||$('#help').open)return;
- for(let left=dt*mapSpeed;left>1e-9&&!st.paused&&!st.encounter&&!st.result;left-=.1)st.step(Math.min(.1,left))}
+ if(talk.active||st.paused||document.hidden||$('#help').open)return;
+ for(let left=dt*mapSpeed;left>1e-9&&!st.paused&&!st.encounter&&!st.result;left-=.1)st.step(Math.min(.1,left));
+ // 幕間：戦闘を経験した主力艦隊が初めて峰の灯の補給圏に入ったら、進行を止めて会話を流す。
+ if(!st.seen.interlude&&st.battles>0&&!st.encounter&&!st.result){const m=st.fleet('main');if(m&&fleetState(m)==='補給圏'){st.seen.interlude=true;st.paused=true;scene('interlude-lamp',toMap)}}}
 function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);last=now;const watch=phase==='watch',fast=phase==='summary';
  if(phase==='map')mapFrame(now,Math.min(.25,raw));
  else if(watch||fast){if(fast){if(b.mode==='paused'&&!document.hidden&&!$('#help').open)b.resume();if(b.mode==='cutin')b.finishCutins()}b.advancePresentation(dt);
   if(b.mode==='running'){acc+=dt*(b.timing?.12:fast?FAST:1);for(let n=0;acc>=TICK&&b.mode==='running'&&n<600;n++){b.step(TICK);acc-=TICK;if(fast&&b.mode==='cutin')b.finishCutins();if(fast&&b.timing){acc=0;break}}}else acc=0;
   if(b.mode==='ended'){if(!endAt)endAt=now+(watch?1500:350);else if(now>=endAt)toResult(b.report())}}
- if(now-lastUI>40){ui();lastUI=now}if(inMap())renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
+ if(now-lastUI>40){ui();lastUI=now}if(talk.active&&talk.bg==='sea')renderer?.render(b,b.flag().id,false);else if(inMap()||talk.active)renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
 Object.defineProperty(window,'__st',{get:()=>st});
-build();recordUI();ui();requestAnimationFrame(frame);
+build();recordUI();ui();requestAnimationFrame(frame);scene('prologue',toMap);

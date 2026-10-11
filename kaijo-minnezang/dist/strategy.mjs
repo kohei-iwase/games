@@ -24,6 +24,7 @@ function battleIds(f){let n=0;return f.ships.map(s=>s.type==='escort'?'escort'+ 
 export class Strategy{
  constructor(){
   this.time=0;this.paused=true;this.result=null;this.reason='';this.lamp={hp:100};this.log=[];this.encounter=null;this.battles=0;this.cooldowns={};
+  this.seen={};// 再生済みの物語の場面（contact／interlude）。
   this.fleets=[
    {id:'main',name:'主力艦隊',ships:['lance','stake','escort'].map(ship),x:520,y:950,target:null,formation:'free',skillOrder:['stake','lance']},
    {id:'detached',name:'別働隊',ships:['guard','escort','escort'].map(ship),x:520,y:1250,target:null,formation:'free',skillOrder:['guard']}];
