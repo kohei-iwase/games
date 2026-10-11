@@ -70,9 +70,10 @@ export function buildScene(b,selected='lance',showRange=false){
  }
  const e=b.enemy,flash=e.hitUntil>b.time,dead=e.hp<=0;
  const root=e.rootUntil>b.time;
- const group=model(world(e.x,e.y,dead?-95:0),[1,1,1],e.angle);
- const hide=flash?[.73,.40,.46,1]:e.form===2?[.32,.13,.25,1]:[.18,.27,.34,1];
- item('disc',world(e.x,e.y,2.4),[104,1,88],[.005,.015,.03,.32]);
+ const kin=b.enemyKind==='kin',k=kin?.55:1;
+ const group=model(world(e.x,e.y,dead?-95*k:0),[k,k,k],e.angle);
+ const hide=flash?[.73,.40,.46,1]:kin?[.12,.19,.24,1]:e.form===2?[.32,.13,.25,1]:[.18,.27,.34,1];
+ item('disc',world(e.x,e.y,2.4),[104*k,1,88*k],[.005,.015,.03,.32]);
  // Massive plated shoulders and horned head rise out of the water.
  local(group,'sphere',[-10,38,0],[65,68,57],hide);
  local(group,'sphere',[0,98,0],[45,61,64],hide);
