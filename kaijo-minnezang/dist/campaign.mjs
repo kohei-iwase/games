@@ -22,9 +22,10 @@ export function epilogue(r){
   else if(r.combos>=3)lines.push({speaker:NAMES.stake,text:`わしの杭を、辺境伯の十字架が${r.combos}度打ち砕きましたな。……先代にもお見せしたかった。`});
   else lines.push({speaker:NAMES.stake,text:'血は充分、城壁が歌っておりますぞ。杭が縫い留めた一瞬、次も逃されませぬよう。'});
   if(sunk.includes(NAMES.guard))lines.push({speaker:'ミラルカ辺境伯',text:'……盾は砕けても、キミの誓いは砕けてないよ。絶対に連れて帰る。'});
+  else if(r.island>=100)lines.push({speaker:NAMES.guard,text:'峰の灯は無傷でございます。島の皆さまも、安らかにお休みになれましょう。'});
   else lines.push({speaker:NAMES.guard,text:r.taken>600?'被害は軽くございません。ですが、旗は一度も下ろしておりません。':'損害軽微。旗を畳み、帰港いたします。'});
  }else{
-  lines.push({speaker:NAMES.guard,text:'旗艦が沈みます！ 辺境伯さまをお曳きして――全艦、旗を降ろせ、撤退です！'});
+  lines.push({speaker:NAMES.guard,text:r.lost==='island'?'峰の灯が……消えてしまいました。全艦、退きます。':'旗艦が沈みます！ 辺境伯さまをお曳きして――全艦、旗を降ろせ、撤退です！'});
   lines.push({speaker:NAMES.stake,text:r.form===2?'あと一息でしたな。第二形態の墜落に、血を吸われすぎ申した。':'血が足りませなんだ。杭で縫い、十字架を合わせる機を、もう一度探りましょうぞ。'});
   lines.push({speaker:'ミラルカ辺境伯',text:'退くのは今夜だけだ！ ローラの鼓動が続く限り、ボクは何度だってこの海に戻ってくる！'});
  }
@@ -33,6 +34,7 @@ export function epilogue(r){
 
 export function hints(r){
  const h=[];
+ if(r.lost==='island')h.push('ネフェリムは峰の灯を目指します。行く手に艦を置くと向きを変え、浅瀬では足が鈍ります。縫い留めで止め、ジョストで押し戻しましょう。');
  if(r.result!=='victory'&&r.ships.find(s=>s.id===FLAGSHIP).sunk)h.push(`旗艦・ミラルカ辺境伯が沈むと敗北。ジョストの後は敵の間合いに残りやすいので、危機のポーズでは「集合」で下げるか、${NAMES.guard}の〈不退の誓い〉の範囲に入れましょう。`);
  if(r.combos===0)h.push('縫い留め（Q）とジョスト（W）を同じポーズで予約すると連携になり、杭を砕いて大きく失血させます。');
  if(r.perfect===0&&r.joustHits>0)h.push('射出集中で金色の範囲にFを合わせると、ジョストの威力が1.5倍になります。');

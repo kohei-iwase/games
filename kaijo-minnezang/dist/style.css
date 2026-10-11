@@ -251,3 +251,7 @@ body[data-mode="cutin"] .pad,body[data-mode="cutin"] .roster,body[data-mode="cut
 @media (max-height:500px) and (orientation:landscape){:root{--form-h:24px}.chart-head small{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.formation-row button{font-size:9px}.wp-clear{font-size:10px;padding:3px 8px}}
 @media (max-width:900px) and (min-height:501px){:root{--form-h:26px}}
 .member.moving{outline:2px dashed var(--gold2);outline-offset:-2px;animation:spinDash 1s linear infinite}
+
+.island-bar{display:flex;align-items:center;gap:6px;margin-top:4px;padding:2px 10px 2px 6px;font-size:10px;color:var(--gold2);letter-spacing:.06em}.island-track{flex:1;min-width:70px;height:4px;border:1px solid var(--edge2);background:#0008;overflow:hidden}.island-track i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--crimson),var(--gold));transition:width .3s}.island-label{white-space:nowrap;font-family:var(--serif,inherit)}.island-bar.siege .island-label{color:var(--red);animation:islandBlink .7s steps(2) infinite}@keyframes islandBlink{50%{opacity:.35}}
+@media (max-height:500px) and (orientation:landscape){.island-bar{margin-top:2px;padding:1px 6px 1px 4px;font-size:9px;gap:4px}.island-track{min-width:46px}}
+@media (max-height:500px) and (orientation:landscape){.hud-left{gap:2px;top:calc(var(--chart-top) + var(--chart-w) * .65 + 19px + var(--form-h))}.island-bar{margin-top:0;padding-block:0}}
