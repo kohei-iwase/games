@@ -7,7 +7,7 @@ export const PROLOGUE={
  lines:[
   {speaker:'赤楯卿',text:'見張りより報せ。黒潮の底から、ネフェリムが浮上した。'},
   {speaker:'茨卿',text:'ならば血を流させましょう。海に血が満ちれば、我らの城は渇きを癒やせる。'},
-  {speaker:'ミラルカ辺境伯',text:'全艦、我に続け！ 血の海ごと、あの巨人を十字架で穿つ。……ローラ、すぐに帰る。'},
+  {speaker:'ミラルカ辺境伯',text:'全艦、ボクに続け！ 血の海ごと、あのデカブツを十字架でぶち抜いてやる。……ローラ、すぐ帰るからね。'},
   {speaker:'赤楯卿',text:'旗を掲げよ。辺境伯が沈めば艦隊は退く――杭の前には出ても、辺境伯の盾は私が務める。'}
  ]
 };
@@ -17,16 +17,16 @@ const RANK_NOTE={S:'吟遊詩人が百年歌い継ぐ戦い',A:'宮廷で称え�
 export function epilogue(r){
  const sunk=r.ships.filter(s=>s.sunk).map(s=>s.name),lines=[];
  if(r.result==='victory'){
-  lines.push({speaker:'ミラルカ辺境伯',text:r.rank==='S'||r.rank==='A'?'勝鬨を上げよ！ ローラ、聞こえるか――この夜の勝利は、お前に捧げる。':'勝ちは勝ちだ。だが次は、一撃で穿ってみせる。'});
+  lines.push({speaker:'ミラルカ辺境伯',text:r.rank==='S'||r.rank==='A'?'勝鬨だ！ ねえローラ、聞こえた？ 今夜の勝ちは、ぜんぶキミにあげる。':'勝ちは勝ち！ ……でも次は、一発で仕留めてみせるからな。'});
   if(sunk.includes('茨卿'))lines.push({speaker:'赤楯卿',text:'茨卿の城が傾いている。曳航しろ、あの杭はまだ要る。'});
   else if(r.combos>=3)lines.push({speaker:'茨卿',text:`私の杭を、あなたの十字架が${r.combos}度打ち砕きました。祈りというより、もう舞踏ですね。`});
   else lines.push({speaker:'茨卿',text:'血は充分――城壁が歌っています。杭が縫い留めた瞬間を、次も逃さないでくださいね。'});
-  if(sunk.includes('赤楯卿'))lines.push({speaker:'ミラルカ辺境伯',text:'赤楯卿……盾は砕けても、その誓いは砕けていない。必ず連れて帰るぞ。'});
+  if(sunk.includes('赤楯卿'))lines.push({speaker:'ミラルカ辺境伯',text:'赤楯卿……盾は砕けても、誓いは砕けてないよ。絶対に連れて帰る。'});
   else lines.push({speaker:'赤楯卿',text:r.taken>600?'被害は軽くない。だが、旗は一度も下ろさなかった。':'損害軽微。旗を畳み、帰港する。'});
  }else{
   lines.push({speaker:'赤楯卿',text:'旗艦が沈む！ 辺境伯を曳け、全艦、旗を降ろせ――撤退だ！'});
   lines.push({speaker:'茨卿',text:r.form===2?'あと一息でした。第二形態の墜落に、血を吸われすぎましたね。':'血が足りませんでした。杭で縫い、十字架を合わせる機を探しましょう。'});
-  lines.push({speaker:'ミラルカ辺境伯',text:'退くのは今夜だけだ。ローラの鼓動が続く限り、私は何度でもこの海へ戻る！'});
+  lines.push({speaker:'ミラルカ辺境伯',text:'退くのは今夜だけだ！ ローラの鼓動が続く限り、ボクは何度だってこの海に戻ってくる！'});
  }
  return {title:r.result==='victory'?'凱歌':'撤退の歌',note:RANK_NOTE[r.rank],lines};
 }

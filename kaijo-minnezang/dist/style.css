@@ -118,7 +118,7 @@ body[data-mode="cutin"] .hud-tr{opacity:0}
 .cutin-knight{display:inline-block;padding:3px 12px;font:800 11px/1 var(--sans);letter-spacing:.2em;color:var(--cutin-ink,#0a1620);background:var(--cutin-color);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);text-shadow:none}
 .cutin h2{margin:8px 0 6px;font:900 italic clamp(22px,3.6vw,46px)/1 var(--sans);letter-spacing:.06em;color:#fff;-webkit-text-stroke:1px color-mix(in srgb,var(--cutin-color) 70%,#fff)}
 .cutin p{margin:0;font:600 clamp(10.5px,1.2vw,14px)/1.45 var(--serif);color:#f1ece0}
-.cutin-count{position:absolute;right:14px;top:12px;font:800 12px/1 var(--sans);letter-spacing:.2em;color:#ffffffaa}
+.cutin.declare h2{white-space:pre-line;font-style:normal;font-family:var(--serif);letter-spacing:.14em;font-size:clamp(20px,3vw,38px);line-height:1.3;-webkit-text-stroke:0;text-shadow:0 2px 0 #000,0 0 18px var(--cutin-color)}.cutin.declare p{font:800 11px/1.4 var(--sans);letter-spacing:.24em;color:#ffffffcc}.cutin-count{position:absolute;right:14px;top:12px;font:800 12px/1 var(--sans);letter-spacing:.2em;color:#ffffffaa}
 .skip-btn{position:absolute;right:10px;bottom:10px;padding:6px 14px;border-radius:18px;border:1px solid #ffffff66;background:#00000066;font:800 11px/1 var(--sans);letter-spacing:.18em}.skip-btn:hover{border-color:#fff}
 .cutin.play .cutin-panel{animation:slideIn .28s cubic-bezier(.2,.9,.25,1.1) both}
 .cutin.play .cutin-crest{animation:crestIn .45s .08s cubic-bezier(.2,.9,.3,1.2) both}
