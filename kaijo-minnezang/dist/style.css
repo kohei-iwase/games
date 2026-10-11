@@ -121,7 +121,7 @@ body[data-mode="cutin"] .hud-tr{opacity:0}
 .cutin.declare h2{white-space:pre-line;font-style:normal;font-family:var(--serif);letter-spacing:.14em;font-size:clamp(20px,3vw,38px);line-height:1.3;-webkit-text-stroke:0;text-shadow:0 2px 0 #000,0 0 18px var(--cutin-color)}.cutin.declare p{font:800 11px/1.4 var(--sans);letter-spacing:.24em;color:#ffffffcc}.cutin-count{position:absolute;right:14px;top:12px;font:800 12px/1 var(--sans);letter-spacing:.2em;color:#ffffffaa}
 .skip-btn{position:absolute;right:10px;bottom:10px;padding:6px 14px;border-radius:18px;border:1px solid #ffffff66;background:#00000066;font:800 11px/1 var(--sans);letter-spacing:.18em}.skip-btn:hover{border-color:#fff}
 .cutin.play .cutin-panel{animation:slideIn .28s cubic-bezier(.2,.9,.25,1.1) both}
-.cutin.play .cutin-crest{animation:crestIn .45s .08s cubic-bezier(.2,.9,.3,1.2) both}
+.cutin.play .cutin-crest{animation:crestIn .45s .08s cubic-bezier(.2,.9,.3,1.2) both}.cutin-portrait{position:absolute;left:-4%;bottom:0;height:100%;width:auto;max-width:none;filter:drop-shadow(0 0 14px #000a) drop-shadow(0 0 2px #fff8)}.cutin.has-portrait .cutin-crest{left:auto;right:6%;opacity:.28}.cutin.play .cutin-portrait{animation:portraitIn .4s .05s cubic-bezier(.2,.9,.3,1.1) both}@keyframes portraitIn{from{transform:translateX(-30%);opacity:0}}
 .cutin.play .cutin-flash{animation:flash .5s .12s ease-out both}
 .cutin.play .cutin-star{animation:star .7s .2s ease-out both}
 .cutin.play .cutin-knight{animation:textIn .3s .18s ease-out both}.cutin.play h2{animation:textIn .32s .26s cubic-bezier(.2,.9,.3,1.15) both}.cutin.play p{animation:textIn .35s .38s ease-out both}
