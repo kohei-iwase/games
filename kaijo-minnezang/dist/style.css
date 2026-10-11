@@ -184,6 +184,15 @@ body[data-mode="running"] .play-btn{background:radial-gradient(circle at 50% 35%
 .story-card::before{content:"❦";position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:14px;color:var(--gold);opacity:.8}.story{background:radial-gradient(ellipse at center,#0c081499,#030208e6)}.eyebrow{font-family:var(--serif);color:var(--gold);letter-spacing:.3em}.story-head h2{color:var(--ivory)}.story-lines b{font-family:var(--serif);color:var(--gold2)}.story-lines p{color:#ece2d2}.story-stats div,.story-hints{border-radius:2px}.story-hints{background:#9e153018;border-color:#e2c07a44;color:#e4d8c6}.story-stats dd{font-family:var(--serif)}.story-rank{font-family:var(--serif);font-style:normal}
 .primary{border-radius:2px;border:1px solid var(--gold);background:linear-gradient(180deg,#b82540,#6a0c1f);color:var(--ivory);font-family:var(--serif);letter-spacing:.14em;box-shadow:0 4px 16px #9e153066,inset 0 0 0 2px #00000055,inset 0 0 0 3px #e2c07a55}.secondary{border-radius:2px;font-family:var(--serif);border-color:#e2c07a66}.secondary:hover{border-color:var(--gold)}
 
+/* 被弾と危機の演出：旗艦の被弾で3D画面が揺れ、続いて心臓の鼓動のように画面全体が「ドクン」と縮む。僚艦の被弾は軽い揺れ。旗艦の危機では鼓動のたびに縮む */
+.beat-veil{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 48%,#2a000ccc 100%)}
+.stage.fx-hit #sea,.stage.fx-hit #seaLabels{animation:hitShake .42s cubic-bezier(.3,.7,.4,1)}.stage.fx-bump #sea,.stage.fx-bump #seaLabels{animation:bumpShake .3s ease-out}
+.stage.fx-beat{animation:heartBeat .75s ease-out}.stage.fx-beat .beat-veil{animation:beatVeil .75s ease-out}
+@keyframes hitShake{0%,100%{transform:none}15%{transform:translate(-9px,5px) scale(1.025)}30%{transform:translate(8px,-6px) scale(1.025)}45%{transform:translate(-6px,3px) scale(1.02)}60%{transform:translate(4px,-2px) scale(1.015)}80%{transform:translate(-2px,1px) scale(1.01)}}
+@keyframes bumpShake{0%,100%{transform:none}30%{transform:translate(-3px,2px) scale(1.008)}60%{transform:translate(2px,-1px) scale(1.008)}}
+@keyframes heartBeat{0%,60%,100%{transform:none}12%{transform:scale(.982)}24%{transform:scale(1.003)}36%{transform:scale(.988)}}
+@keyframes beatVeil{12%{opacity:.9}24%{opacity:.3}36%{opacity:.7}100%{opacity:0}}
+
 /* 表示中は他HUDを控えめに */
 body[data-story="on"] .pad,body[data-story="on"] .roster,body[data-story="on"] .hud-left,body[data-story="on"] .chart,body[data-story="on"] .boss,body[data-story="on"] .timer,body[data-story="on"] .threat{opacity:.25;pointer-events:none}
 body[data-mode="cutin"] .pad,body[data-mode="cutin"] .roster,body[data-mode="cutin"] .hud-left,body[data-mode="cutin"] .threat,body[data-mode="cutin"] .command-ribbon{opacity:0}

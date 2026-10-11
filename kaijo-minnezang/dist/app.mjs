@@ -32,11 +32,15 @@ function storyUI(){
 }
 function recordUI(){const rec=loadRecords()[b.difficulty];$('#bestRecord').textContent=rec?`最高評価 ${rec.rank}${rec.rank!=='—'?` · ${clock(rec.time)}`:''}`:'記録なし'}
 // 状態の変化を前回値と比べて音を鳴らす。Battle が作り直されたら前回値を取り直す（鳴らさない）。
-let pb=null,pMode='',pCutin='',pRoot=0,pLunge=false,pImpact=0,lastHeart=0;
+let pb=null,pMode='',pCutin='',pRoot=0,pLunge=false,pImpact=0,lastHeart=0,pHit={};
+// 姫の心臓は見せず、被弾と危機を画面の揺れと「ドクン」と縮む動きで間接的に表す（動きを減らす設定ではCSS側で止まる）。
+const stage=$('.stage');function screenFx(k){if(!stage?.classList)return;stage.classList.remove(k);void stage.offsetWidth;stage.classList.add(k)}
 function sound(){const e=b.enemy,fl=b.ship(FLAGSHIP),ck=b.mode==='cutin'&&b.cutin?`${b.cutin.index}:${b.cutin.ids[b.cutin.index]}`:'',lunge=!!fl.lunge,imp=Math.max(0,...b.effects.filter(f=>f.type==='impact').map(f=>f.id));
  audio.music(story?'drama':b.mode==='ready'?'march':b.mode==='ended'?'drama':e.form===2?'waltz2':'waltz');audio.duck(b.mode==='paused'||$('#help').open);
  if(pb===b){if(b.mode!==pMode&&(b.mode==='paused'||b.mode==='ended'))audio.sfx('bell');if(ck&&ck!==pCutin)audio.sfx('cutin');if(e.rootUntil>pRoot)audio.sfx('stake');if(lunge&&!pLunge)audio.sfx('cross');if(imp>pImpact)audio.sfx('hit');
-  const now=performance.now();if(b.mode==='running'&&fl.hp>0&&fl.hp/fl.maxHp<=.3&&now-lastHeart>1000){lastHeart=now;audio.sfx('heart')}}
+  const now=performance.now();if(b.mode==='running'&&fl.hp>0&&fl.hp/fl.maxHp<=.3&&now-lastHeart>1000){lastHeart=now;audio.sfx('heart');screenFx('fx-beat')}
+  for(const s of b.ships)if(s.hitUntil>(pHit[s.id]||0)){if(s.id===FLAGSHIP){screenFx('fx-hit');setTimeout(()=>screenFx('fx-beat'),200)}else screenFx('fx-bump')}}
+ for(const s of b.ships)pHit[s.id]=s.hitUntil;
  pb=b;pMode=b.mode;pCutin=ck;pRoot=e.rootUntil;pLunge=lunge;pImpact=imp}
 function ui(){storyUI();sound();const plan=b.canPlan();$('#clock').textContent=clock(b.time);$('#statusText').textContent={ready:'出撃準備',running:'交戦中',paused:'戦術ポーズ',cutin:'騎士の誓い',ended:'戦闘終了'}[b.mode];$('#mapState').textContent=`掲揚：${ORDERS[b.order].name}`;$('#playBtn').textContent={ready:'戦闘開始',running:'一時停止',paused:'再開',cutin:'発動中',ended:'再挑戦'}[b.mode];const body=document.body;if(body){body.dataset.mode=b.mode;body.dataset.plan=plan?'on':'';body.dataset.threat=b.enemy.attack&&b.mode!=='ended'?'on':'';body.dataset.story=story?'on':''}$('#playBtn').disabled=b.mode==='cutin'||!renderer||renderer.lost;const notice=b.mode==='running'&&b.notice&&b.time<b.notice.until?b.notice:null;$('#mapAlert').classList.toggle('hidden',!!story||!notice&&!['ready','paused','ended'].includes(b.mode));$('#alertTitle').textContent=notice?notice.title:b.reason;$('#alertBody').textContent=notice?notice.body:b.detail;
  $('#monsterBar').style.width=$('#monsterLag').style.width=b.enemy.hp/b.enemy.maxHp*100+'%';$('#monsterText').textContent=`${Math.ceil(b.enemy.hp)} / ${b.enemy.maxHp}`;$('#formLabel').textContent=b.enemy.form===2?'第二形態':'第一形態';$('#bleedText').innerHTML=`<span class="bleed-label">失血</span>${'<i class="on"></i>'.repeat(b.enemy.bleed)}${'<i></i>'.repeat(5-b.enemy.bleed)}${b.enemy.rootUntil>b.time?'<span class="tag root">拘束中</span>':''}`;

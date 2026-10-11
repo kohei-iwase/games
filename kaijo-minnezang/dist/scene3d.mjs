@@ -1,8 +1,6 @@
 import {model,multiply,segmentMatrix,world,TAU,clamp} from './space3d.mjs';
-// 姫の心臓の色（騎士ごと）：ミラルカは深紅、カナン卿は赤銅、オリーヴェは青。
-const HEART={lance:[.92,.12,.28],stake:[1,.42,.16],guard:[.42,.66,1]};
 const C={stone:[.40,.47,.51,1],dark:[.07,.12,.17,1],gold:[.70,.52,.25,1],bone:[.70,.72,.62,1],teal:[.28,.68,.64,1],blue:[.30,.48,.76,1],blood:[.64,.075,.23,1]};
-export function buildScene(b,selected='lance',showRange=false,now=b.time){
+export function buildScene(b,selected='lance',showRange=false){
  const solid=[],transparent=[];
  function draw(mesh,m,color,glow=0,water=0){(color[3]<1?transparent:solid).push({mesh,model:Array.from(m),color,glow,water})}
  const item=(mesh,p,scale,color,angle=0,glow=0)=>draw(mesh,model(p,scale,angle),color,glow);
@@ -57,9 +55,6 @@ export function buildScene(b,selected='lance',showRange=false,now=b.time){
    for(const z of [-36,36])local(g,'box',[-5,20,z],[80,14,7],C.blue);
   }
   if(!dead){
-   // 姫の心臓：塔の前で脈打つ光の球。蓄血25ごとに鼓動が速く明るくなり、耐久30%以下では乱れて赤く明滅する。撃沈で消える。
-   const tier=Math.floor(s.blood/25),crit=s.hp/s.maxHp<=.3,bpm=crit?112:56+tier*14,ph=(now*bpm/60+s.x*.013)%1,beat=Math.exp(-((ph/.07)**2))+.6*Math.exp(-(((ph-.2)/.07)**2))+(crit?.5*Math.exp(-(((ph-.55)/.06)**2)):0),flick=crit?Math.sin(now*9)+Math.sin(now*23):0,hc=flick>.9?[1,.16,.18]:flick<-.4?HEART[s.id].map(v=>v*.35):HEART[s.id],hg=flick<-.4?.15:.75+tier*.08+beat*.5,hr=5+tier*.5+beat*1.6;
-   local(g,'sphere',[2,44,0],[hr,hr,hr],[...hc,1],0,hg);local(g,'sphere',[2,44,0],[hr*2,hr*2,hr*2],[...hc,flick<-.4?.06:.22+beat*.22],0,1);
    if(s.id===selected)ring(s.x,s.y,62,[...color.slice(0,3),.85],3.7);
    if(s.blood>=25)ring(s.x,s.y,67,[.90,.20,.40,.5],4.1);
    if(showRange&&s.id===selected)ring(s.x,s.y,s.id==='guard'?235:s.range,[...color.slice(0,3),.42],3.1);
