@@ -1,11 +1,13 @@
-import {meshes,normalMatrix,cameraState,shipCamera,project,groundPoint,world,clamp} from './space3d.mjs';
+import {meshes,normalMatrix,cameraState,cameraFrom,shipCamera,project,groundPoint,world,clamp} from './space3d.mjs';
 import {vertexShader,fragmentShader} from './shaders3d.mjs';
 import {buildScene,bloodTexture} from './scene3d.mjs';
 import {FLAGSHIP} from './battle.mjs';
+import {buildMapScene,mapWorld,mapFromGround,shipMaxHp,FLEET_COLOR} from './mapscene3d.mjs';
+import {MAP,LAMP} from './strategy.mjs';
 const VIEW_PITCH={rear:.32,first:-.08,overview:0};
 export class SeaRenderer {
  constructor(canvas,{reducedMotion=false}={}){
-  this.canvas=canvas;this.reducedMotion=reducedMotion;this.view='rear';this.flagship=FLAGSHIP;this.heading=null;this.lookYaw=0;this.pitch=VIEW_PITCH.rear;this.lastFrame=0;this.yaw=.12;this.elevation=.82;this.zoom=1;this.drag=null;this.dragged=false;this.bloodTime=-1;this.lastBattle=null;this.lost=false;
+  this.canvas=canvas;this.reducedMotion=reducedMotion;this.view='rear';this.flagship=FLAGSHIP;this.heading=null;this.lookYaw=0;this.pitch=VIEW_PITCH.rear;this.lastFrame=0;this.yaw=.12;this.elevation=.82;this.zoom=1;this.drag=null;this.dragged=false;this.bloodTime=-1;this.lastBattle=null;this.lost=false;this.map=false;this.mapZoom=1;this.mapAt=[0,0];
   this.overlay=document.querySelector('#seaLabels');this.ctx=this.overlay.getContext('2d');
   const gl=canvas.getContext('webgl',{antialias:true,alpha:false,powerPreference:'high-performance'});if(!gl)throw new Error('3D表示にはWebGLが必要です。ブラウザのグラフィックアクセラレーションを有効にして再読み込みしてください。');this.gl=gl;
   const shader=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s};
@@ -17,23 +19,23 @@ export class SeaRenderer {
   this.pointers=new Map();
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('pointerdown',e=>{this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});this.drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};this.dragged=false;canvas.setPointerCapture?.(e.pointerId);this.pinch=this.pinchDistance();});
-  canvas.addEventListener('pointermove',e=>{if(!this.pointers.has(e.pointerId)||!this.drag)return;this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size>1){const d=this.pinchDistance();if(this.pinch>0&&d>0)this.zoom=clamp(this.zoom*this.pinch/d,.65,1.7);this.pinch=d;this.dragged=true;return}const dx=e.clientX-this.drag.x,dy=e.clientY-this.drag.y;if(Math.hypot(e.clientX-this.drag.startX,e.clientY-this.drag.startY)>5)this.dragged=true;if(this.dragged){if(this.view==='overview'){this.yaw-=dx*.006;this.elevation=clamp(this.elevation+dy*.004,.48,1.38);}else{this.lookYaw=clamp(this.lookYaw+dx*.005,-Math.PI,Math.PI);this.pitch=this.view==='first'?clamp(this.pitch-dy*.004,-.7,.45):clamp(this.pitch+dy*.004,.08,1.2);}}this.drag.x=e.clientX;this.drag.y=e.clientY;});
+  canvas.addEventListener('pointermove',e=>{if(!this.pointers.has(e.pointerId)||!this.drag)return;this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size>1){const d=this.pinchDistance();if(this.pinch>0&&d>0)this.zoomBy(this.pinch/d);this.pinch=d;this.dragged=true;return}const dx=e.clientX-this.drag.x,dy=e.clientY-this.drag.y;if(Math.hypot(e.clientX-this.drag.startX,e.clientY-this.drag.startY)>5)this.dragged=true;if(this.dragged){if(this.map)this.panMap(this.drag.x,this.drag.y,e.clientX,e.clientY);else if(this.view==='overview'){this.yaw-=dx*.006;this.elevation=clamp(this.elevation+dy*.004,.48,1.38);}else{this.lookYaw=clamp(this.lookYaw+dx*.005,-Math.PI,Math.PI);this.pitch=this.view==='first'?clamp(this.pitch-dy*.004,-.7,.45):clamp(this.pitch+dy*.004,.08,1.2);}}this.drag.x=e.clientX;this.drag.y=e.clientY;});
   const end=e=>{this.pointers.delete(e.pointerId);this.drag=null;this.pinch=0;};canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
-  canvas.addEventListener('wheel',e=>{e.preventDefault();this.zoom=clamp(this.zoom*Math.exp(e.deltaY*.001),.65,1.7)},{passive:false});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();this.zoomBy(Math.exp(e.deltaY*.001))},{passive:false});
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true;canvas.dispatchEvent(new Event('renderlost'));});
  }
  pinchDistance(){const p=[...this.pointers.values()];return p.length>1?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0}
- resetCamera(){this.yaw=.12;this.elevation=.82;this.zoom=1;this.lookYaw=0;this.pitch=VIEW_PITCH[this.view]??0}
+ resetCamera(){if(this.map){this.mapZoom=1;this.mapAt=[0,0];return}this.yaw=.12;this.elevation=.82;this.zoom=1;this.lookYaw=0;this.pitch=VIEW_PITCH[this.view]??0}
  setView(view){this.view=VIEW_PITCH[view]===undefined?'rear':view;this.resetCamera();this.heading=null}
  followed(b){const f=b.ship(this.flagship);return f&&f.hp>0?f:b.ships.find(s=>s.hp>0)||f}
  // The camera turns with the flagship, eased so sharp course changes do not snap the view.
  follow(b){const s=this.followed(b),now=performance.now(),dt=this.lastFrame?Math.min(.1,(now-this.lastFrame)/1000):0;this.lastFrame=now;if(!s)return;if(this.heading===null||this.reducedMotion)this.heading=s.angle;else{const d=Math.atan2(Math.sin(s.angle-this.heading),Math.cos(s.angle-this.heading));this.heading+=d*Math.min(1,dt*2.5)}}
- zoomBy(f){this.zoom=clamp(this.zoom*f,.65,1.7)}
+ zoomBy(f){if(this.map)this.mapZoom=clamp(this.mapZoom*f,.35,1.25);else this.zoom=clamp(this.zoom*f,.65,1.7)}
  point(event){if(this.dragged){this.dragged=false;return null}const r=this.canvas.getBoundingClientRect();this.updateCamera();const p=groundPoint(this.camera.inv,event.clientX-r.left,event.clientY-r.top,r.width,r.height);return p&&p.x>=0&&p.x<=1000&&p.y>=0&&p.y<=650?p:null}
  pickShip(event,b){if(!this.camera)return null;const r=this.canvas.getBoundingClientRect(),x=event.clientX-r.left,y=event.clientY-r.top;let closest=null,d=52;for(const s of b.ships){const p=project(this.camera.vp,world(s.x,s.y,30),r.width,r.height);if(!p)continue;const n=Math.hypot(p.x-x,p.y-y);if(n<d){closest=s;d=n}}return closest}
  updateCamera(b=this.lastBattle){const aspect=this.canvas.clientWidth/this.canvas.clientHeight,s=b&&this.view!=='overview'?this.followed(b):null;this.camera=s?shipCamera(aspect,this.view,s,(this.heading??s.angle)+this.lookYaw,this.pitch,this.zoom):cameraState(aspect,this.yaw,this.elevation,this.zoom)}
  render(b,selected,showRange){
-  if(this.lost)return;const gl=this.gl,w=this.canvas.clientWidth,h=this.canvas.clientHeight;if(!w||!h)return;const dpr=Math.min(globalThis.devicePixelRatio||1,1.7);
+  this.map=false;if(this.lost)return;const gl=this.gl,w=this.canvas.clientWidth,h=this.canvas.clientHeight;if(!w||!h)return;const dpr=Math.min(globalThis.devicePixelRatio||1,1.7);
   if(this.canvas.width!==Math.round(w*dpr)||this.canvas.height!==Math.round(h*dpr)){this.canvas.width=Math.round(w*dpr);this.canvas.height=Math.round(h*dpr);this.overlay.width=this.canvas.width;this.overlay.height=this.canvas.height;}
   this.follow(b);this.updateCamera(b);gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);const u=this.locations;gl.uniformMatrix4fv(u.uVP,false,this.camera.vp);gl.uniform3fv(u.uEye,this.camera.eye);gl.uniform1f(u.uTime,b.time);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   if(this.lastBattle!==b||Math.abs(b.time-this.bloodTime)>.25){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,96,96,0,gl.RGBA,gl.UNSIGNED_BYTE,bloodTexture(b));this.bloodTime=b.time;this.lastBattle=b;}
@@ -46,12 +48,40 @@ export class SeaRenderer {
  labels(b,selected,w,h,dpr){const c=this.ctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.textAlign='center';c.textBaseline='middle';const at=(x,y,z)=>project(this.camera.vp,world(x,y,z),w,h);
   const pill=(text,p,color,size=12)=>{if(!p||p.depth>1||p.x<-100||p.x>w+100||p.y<0||p.y>h)return;c.font=`500 ${size}px system-ui,sans-serif`;const bw=c.measureText(text).width+18;c.fillStyle='#06121dea';c.fillRect(p.x-bw/2,p.y-12,bw,24);c.fillStyle=color;c.fillText(text,p.x,p.y);};
   for(const s of b.ships){if(this.view==='first'&&s===this.followed(b))continue;const p=at(s.x,s.y,113);if(!p||p.depth>1)continue;p.x=clamp(p.x,65,w-65);p.y=clamp(p.y,45,h-40);pill(`${s.name} · 血${Math.floor(s.blood)}`,p,s.hp>0?s.color:'#9ba2a7',selected===s.id?13:11);c.fillStyle='#112632';c.fillRect(p.x-42,p.y+14,84,4);c.fillStyle=s.hp/s.maxHp<.3?'#f77d99':s.color;c.fillRect(p.x-42,p.y+14,84*s.hp/s.maxHp,4);if(b.protected(s))pill('防護 · 押し戻し無効',{x:p.x,y:p.y+35,depth:0},'#aed6ff',10);}
-  const e=b.enemy;const ep=at(e.x,e.y,240);pill(e.hp<=0?'ネフェリム撃破':e.form===2?'ネフェリム · 第二形態':'ネフェリム',ep,'#f2b0bf',13);
+  const e=b.enemy;const ep=at(e.x,e.y,240);pill(e.hp<=0?`${b.enemyName}撃破`:e.form===2?`${b.enemyName} · 第二形態`:b.enemyName,ep,'#f2b0bf',13);
   if(e.rootUntil>b.time)pill(`血海拘束 ${(e.rootUntil-b.time).toFixed(1)}s`,at(e.x,e.y,212),'#f3a4cd',11);
   if(e.attack)pill(`${e.attack.type==='slam'?'血潮の墜落':'薙ぎ払い'} ${(e.attack.duration-e.attack.age).toFixed(1)}s`,e.attack.type==='slam'?at(e.attack.x,e.attack.y+e.attack.range,10):at(e.x-100,e.y,10),'#ffb2bd',12);
   if(b.joust){const s=b.ship('lance');pill(`ジョスト · 速度${Math.round(b.joust.speed)}`,at(s.x,s.y,142),'#ffe0a0',12);}
   for(const f of b.effects.filter(f=>f.type==='label')){c.globalAlpha=Math.min(1,(1-f.age/f.life)*2);pill(f.text,at(f.x,f.y,70+f.age*24),f.color,13);}c.globalAlpha=1;
   const rally=b.pending==='rally'?b.pendingRally:b.order==='rally'?b.rally:null;if(rally)pill('集合地点',at(rally.x,rally.y,15),'#f4dc9b',11);
   const entry=b.joust?.entry||b.entry;if(entry&&(b.joust||b.pendingSkills.includes('lance')))pill('助走点',at(entry.x,entry.y,15),'#f4dc9b',11);
+ }
+
+ // ---- 戦略マップ ----
+ // 俯瞰カメラ。海域全体が収まる距離が zoom=1。パンは mapAt（3D空間の注視点）で持つ。
+ updateMapCamera(){const aspect=this.canvas.clientWidth/this.canvas.clientHeight,el=1.05,d=1150*this.mapZoom*Math.max(1,1.4/aspect),[x,z]=this.mapAt;this.camera=cameraFrom(aspect,[x,Math.sin(el)*d,z+Math.cos(el)*d],[x,0,z])}
+ // ドラッグの前後の画面座標が指す海面の差だけ注視点を動かす（つかんだ海面が指に付いてくる）。
+ panMap(x0,y0,x1,y1){if(!this.camera)return;const r=this.canvas.getBoundingClientRect(),a=groundPoint(this.camera.inv,x0-r.left,y0-r.top,r.width,r.height),b=groundPoint(this.camera.inv,x1-r.left,y1-r.top,r.width,r.height);if(!a||!b)return;const lim=[MAP.w*.16,MAP.h*.16];this.mapAt=[clamp(this.mapAt[0]+a.x-b.x,-lim[0],lim[0]),clamp(this.mapAt[1]+a.y-b.y,-lim[1],lim[1])];this.updateMapCamera()}
+ // クリック位置を戦略マップの座標と、近くの艦隊・敵（画面上の距離）にする。ドラッグ直後のクリックは無視。
+ mapClick(event,st){if(this.dragged){this.dragged=false;return null}if(!this.camera||!this.map)return null;const r=this.canvas.getBoundingClientRect(),x=event.clientX-r.left,y=event.clientY-r.top,out={fleet:null,enemy:null,point:null};let best=48;
+  const test=(o,h,key)=>{const p=project(this.camera.vp,mapWorld(o.x,o.y,h),r.width,r.height);if(!p)return;const n=Math.hypot(p.x-x,p.y-y);if(n<best){best=n;out.fleet=out.enemy=null;out[key]=o}};
+  for(const f of st.fleets)test(f,20,'fleet');for(const e of st.enemies)if(e.active)test(e,e.kind==='nephilim'?40:15,'enemy');
+  const g=groundPoint(this.camera.inv,x,y,r.width,r.height);if(g){const p=mapFromGround(g);if(p.x>=0&&p.x<=MAP.w&&p.y>=0&&p.y<=MAP.h)out.point=p}return out}
+ renderMap(st,{selected=null}={}){
+  this.map=true;if(this.lost)return;const gl=this.gl,w=this.canvas.clientWidth,h=this.canvas.clientHeight;if(!w||!h)return;const dpr=Math.min(globalThis.devicePixelRatio||1,1.7),now=performance.now()/1000;
+  if(this.canvas.width!==Math.round(w*dpr)||this.canvas.height!==Math.round(h*dpr)){this.canvas.width=Math.round(w*dpr);this.canvas.height=Math.round(h*dpr);this.overlay.width=this.canvas.width;this.overlay.height=this.canvas.height}
+  this.updateMapCamera();gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);const u=this.locations;gl.uniformMatrix4fv(u.uVP,false,this.camera.vp);gl.uniform3fv(u.uEye,this.camera.eye);gl.uniform1f(u.uTime,now);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
+  if(this.lastBattle!==null){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));this.lastBattle=null}
+  const scene=buildMapScene(st,{selected,now});gl.disable(gl.BLEND);gl.depthMask(true);for(const obj of scene.solid)this.draw(obj);
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+  const eye=this.camera.eye;scene.transparent.sort((a,z)=>{const dist=o=>Math.hypot(o.model[12]-eye[0],o.model[13]-eye[1],o.model[14]-eye[2]);return dist(z)-dist(a)});for(const obj of scene.transparent)this.draw(obj);gl.depthMask(true);
+  this.mapLabels(st,selected,w,h,dpr);
+ }
+ mapLabels(st,selected,w,h,dpr){const c=this.ctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.textAlign='center';c.textBaseline='middle';
+  const at=(o,z)=>project(this.camera.vp,mapWorld(o.x,o.y,z),w,h);
+  const tag=(text,p,color,hp,size=12)=>{if(!p||p.x<-100||p.x>w+100||p.y<0||p.y>h)return;c.font=`500 ${size}px system-ui,sans-serif`;const bw=Math.max(c.measureText(text).width+16,70);c.fillStyle='#0c0814e8';c.fillRect(p.x-bw/2,p.y-11,bw,22+(hp===null?0:6));c.strokeStyle=color+'66';c.lineWidth=1;c.strokeRect(p.x-bw/2+.5,p.y-11+.5,bw-1,21+(hp===null?0:6));c.fillStyle=color;c.fillText(text,p.x,p.y);if(hp!==null){c.fillStyle='#000a';c.fillRect(p.x-bw/2+4,p.y+9,bw-8,3);c.fillStyle=hp<.3?'#f77d99':color;c.fillRect(p.x-bw/2+4,p.y+9,(bw-8)*hp,3)}};
+  tag(LAMP.name,at(LAMP,95),'#f2d58f',null,12);
+  for(const f of st.fleets){const hp=f.ships.reduce((n,s)=>n+Math.max(0,s.hp),0)/f.ships.reduce((n,s)=>n+shipMaxHp(s.type),0);tag(f.name,at(f,70),FLEET_COLOR[f.id]||'#d23a54',hp,f.id===selected?13:11)}
+  for(const e of st.enemies){if(!e.active)continue;tag(`${e.name} ${Math.ceil(e.hp)}`,at(e,e.kind==='nephilim'?100:50),e.kind==='nephilim'?'#f2b0bf':'#c8a9b4',e.hp/e.maxHp,11)}
  }
 }
