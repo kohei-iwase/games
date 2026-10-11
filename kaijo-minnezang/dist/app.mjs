@@ -43,7 +43,7 @@ function ui(){storyUI();const plan=b.canPlan();$('#clock').textContent=clock(b.t
 // 左上の海図：彼我の位置、血域、敵の攻撃範囲、集合・助走点を常に描く。ポーズ中のクリックで移動（集合）を指示する。
 const chart=$('#chart'),chartCtx=chart?.getContext?.('2d'),TAU=Math.PI*2;
 function drawChart(){if(!chartCtx)return;const dpr=Math.min(2,window.devicePixelRatio||1),w=chart.clientWidth||240,h=chart.clientHeight||156,cw=Math.round(w*dpr),ch=Math.round(h*dpr);if(chart.width!==cw||chart.height!==ch){chart.width=cw;chart.height=ch}const c=chartCtx,k=w/WIDTH,u=1/k,circle=(x,y,r)=>{c.beginPath();c.arc(x,y,r,0,TAU)};c.setTransform(dpr*k,0,0,dpr*h/HEIGHT,0,0);c.clearRect(0,0,WIDTH,HEIGHT);
- c.strokeStyle='#5fe3d61c';c.lineWidth=u;c.beginPath();for(let x=100;x<WIDTH;x+=100){c.moveTo(x,0);c.lineTo(x,HEIGHT)}for(let y=100;y<HEIGHT;y+=100){c.moveTo(0,y);c.lineTo(WIDTH,y)}c.stroke();
+ c.strokeStyle='#e2c07a1f';c.lineWidth=u;c.beginPath();for(let x=100;x<WIDTH;x+=100){c.moveTo(x,0);c.lineTo(x,HEIGHT)}for(let y=100;y<HEIGHT;y+=100){c.moveTo(0,y);c.lineTo(WIDTH,y)}c.stroke();
  for(const p of b.pools){c.fillStyle=`rgba(194,31,58,${Math.max(.08,Math.min(.5,p.life/24*.5))})`;circle(p.x,p.y,p.radius);c.fill()}
  const a=b.enemy.attack;if(a&&b.mode!=='ended'){c.beginPath();if(a.type==='slam')c.arc(a.x,a.y,a.range,0,TAU);else{c.moveTo(a.x,a.y);c.arc(a.x,a.y,a.range,a.angle-a.arc,a.angle+a.arc);c.closePath()}c.fillStyle='#ff4d5e44';c.fill();c.strokeStyle='#ff4d5e';c.lineWidth=1.5*u;c.stroke()}
  if(showRange)for(const s of b.ships)if(s.hp>0&&s.id===selected){c.setLineDash([6*u,5*u]);c.strokeStyle=s.color+'88';c.lineWidth=u;circle(s.x,s.y,s.range);c.stroke();c.setLineDash([])}
