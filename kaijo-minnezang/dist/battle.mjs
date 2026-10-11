@@ -1,6 +1,6 @@
 export const WIDTH=1000, HEIGHT=650;
 export const ORDERS={balanced:{name:'航戦',damage:1,speed:1,incoming:1},charge:{name:'突撃',damage:1.2,speed:1.2,incoming:1.2},rally:{name:'集合',damage:.85,speed:1.3,incoming:.8},hold:{name:'死守',damage:1,speed:.5,incoming:.65}};
-export const DIFFICULTY={easy:{name:'見習い',note:'敵の体力・威力が低く、攻撃間隔が長い',enemyHp:.75,enemyDamage:.7,attackGap:1.25,bonus:-10},normal:{name:'正騎士',note:'標準の難度',enemyHp:1,enemyDamage:1,attackGap:1,bonus:0},hard:{name:'誓約',note:'敵が頑強で、攻撃が苛烈',enemyHp:1.35,enemyDamage:1.45,attackGap:.8,bonus:8}};
+export const DIFFICULTY={normal:{name:'正騎士',note:'最初の戦い',enemyHp:.75,enemyDamage:.7,attackGap:1.25,bonus:0}};
 export const SKILLS={stake:{name:'縫い留め',cooldown:18,crest:'✣',quote:'血海よ、彼の足を縫い留めよ。'},lance:{name:'ジョスト',cooldown:15,crest:'⚜',quote:'この一槍に、誓いを。'},guard:{name:'不退の誓い',cooldown:20,crest:'✠',quote:'我らの旗は、退かぬ。'}};
 export const FLAGSHIP='lance';
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
