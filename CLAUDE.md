@@ -12,6 +12,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 作業ブランチ → `develop` へのマージは、テストが通っていれば確認なしで行ってよい。
 - `main` へのマージ・プッシュはユーザーが手動で行う。Claude は `main` にプッシュ・マージしない（PRを作る場合も、マージはしない）。
+- PR がマージされたら、head ブランチは `.github/workflows/delete-merged-branch.yml` が自動で削除する（`main` / `develop` は対象外）。PR を経ずに作業ブランチを `develop` へマージしたときは、Claude が `git push origin --delete <作業ブランチ>` で削除する。
+- 作業ブランチの PR がマージされた（PR のマージ通知を受け取った、または自分で `develop` へのマージを終えた）ら、Claude はユーザーへの確認なしに、そのセッション自身をアーカイブしてよい（claude-code-remote の `archive_session` に自分のセッションIDを渡す。IDは `get_session` で確認する）。アーカイブ前に、未プッシュの変更がないことを確認し、結果を一言報告する。
 
 ## モデルの使い分け
 
