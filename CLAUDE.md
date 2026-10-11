@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 作業ブランチ → `develop` へのマージは、テストが通っていれば確認なしで行ってよい。
 - `main` へのマージ・プッシュはユーザーが手動で行う。Claude は `main` にプッシュ・マージしない（PRを作る場合も、マージはしない）。
+- GitHub 側で `main` に force push 禁止・ブランチ削除禁止の保護ルールを設定している（PR必須やCI必須ではない）。`git push --force` は `main` 以外でも、ユーザーの指示なしには使わない。
 
 ## モデルの使い分け
 
@@ -26,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 複数ファイルにまたがる調査は、自分で読み回らず `searcher` に任せる。
 - 実装は、変更箇所と仕様を明確にしてから `implementer` に渡す。返ってきた差分とテスト結果は自分で確認してからコミットする。
-- `codex` には、ユーザーが Codex・GPT 系モデルを指定したときだけ任せる。既定の実装担当は `implementer`。`codex` を使うには、環境に `OPENAI_API_KEY` を登録し、`api.openai.com` への通信を許可しておく必要がある。モデルは環境変数 `CODEX_MODEL` で指定できる。
+- `codex` には、ユーザーが Codex・GPT 系モデルを指定したときだけ任せる。既定の実装担当は `implementer`。`codex` を使うには、Codex CLI（Node 16以上。nvm で導入した Node 22 を使う）をインストールし、APIキーでログイン済みにしておく（`printenv OPENAI_API_KEY | codex login --with-api-key` のように標準入力で渡す。状態確認は `codex login status`）。`api.openai.com` への通信も許可しておく。モデルは環境変数 `CODEX_MODEL` で指定できる。APIキーをファイルやチャットに書かない。
 - 1〜2行の修正や、すでに開いているファイルの小さな変更は、委任せずに直接行ってよい。
 - ユーザーとの相談、仕様の決定、コミット・プッシュはメインの会話で行う。
 
