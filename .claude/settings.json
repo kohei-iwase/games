@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opus",
+  "permissions": {
+    "allow": [
+      "Bash(node tests/*)",
+      "Bash(node kaijo-minnezang/tests/*)",
+      "Bash(python tests/native3d.py)",
+      "Bash(python3 tests/native3d.py)",
+      "Bash(python3 -m http.server *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git fetch*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout develop)",
+      "Bash(git merge *)",
+      "Bash(git push origin develop)",
+      "Bash(git push -u origin develop)",
+      "Bash(git push -u origin claude/*)",
+      "Bash(ls*)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(find *)"
+    ],
+    "deny": [
+      "Bash(git push * main)",
+      "Bash(git push * main:*)",
+      "Bash(git push * HEAD:main)",
+      "Bash(git push * *:main)",
+      "Bash(git push * refs/heads/main)",
+      "Bash(git push * *:refs/heads/main)",
+      "mcp__github__merge_pull_request"
+    ]
+  }
+}
