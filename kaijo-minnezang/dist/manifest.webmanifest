@@ -1,0 +1,9 @@
+{
+  "name": "海城のミンネザング",
+  "short_name": "ミンネザング",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#071019",
+  "theme_color": "#0a111b"
+}

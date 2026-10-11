@@ -17,7 +17,7 @@ export function cameraFrom(aspect,eye,target,fov=.75,near=5){const view=lookAt(e
 // Flagship cameras. heading is the battle-plane angle the camera faces; pitch tilts it (rear: orbit height, first: look up/down).
 export function shipCamera(aspect,view,ship,heading,pitch,zoom=1){const dx=Math.cos(heading),dz=Math.sin(heading),p=world(ship.x,ship.y);
  if(view==='first'){const c=Math.cos(ship.angle),n=Math.sin(ship.angle),eye=[p[0]+c*10,58,p[2]+n*10];return cameraFrom(aspect,eye,[eye[0]+dx*Math.cos(pitch)*100,eye[1]+Math.sin(pitch)*100,eye[2]+dz*Math.cos(pitch)*100],clamp(.95*zoom,.55,1.5),2)}
- const d=320*zoom,eye=[p[0]-dx*Math.cos(pitch)*d,40+Math.sin(pitch)*d,p[2]-dz*Math.cos(pitch)*d];return cameraFrom(aspect,eye,[p[0]+dx*180,30,p[2]+dz*180],.85)}
+ const d=320*zoom/Math.sqrt(Math.min(1,aspect/1.3)),eye=[p[0]-dx*Math.cos(pitch)*d,40+Math.sin(pitch)*d,p[2]-dz*Math.cos(pitch)*d];return cameraFrom(aspect,eye,[p[0]+dx*180,30,p[2]+dz*180],.85)}
 export const world=(x,y,h=0)=>[x-500,h,y-325];
 export function project(vp,p,w,h){const q=transform(vp,p);if(q[3]<=0)return null;return {x:(q[0]/q[3]+1)*w/2,y:(1-q[1]/q[3])*h/2,depth:q[2]/q[3]}}
 export function groundPoint(inv,x,y,w,h){const nx=x/w*2-1,ny=1-y/h*2,a=transform(inv,[nx,ny,-1,1]),b=transform(inv,[nx,ny,1,1]);for(let i=0;i<3;i++){a[i]/=a[3];b[i]/=b[3]}const dy=b[1]-a[1];if(Math.abs(dy)<1e-8)return null;const t=-a[1]/dy;if(t<0)return null;return {x:a[0]+(b[0]-a[0])*t+500,y:a[2]+(b[2]-a[2])*t+325}}
