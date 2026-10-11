@@ -1,7 +1,7 @@
 export const WIDTH=1000, HEIGHT=650;
 export const ORDERS={balanced:{name:'航戦',damage:1,speed:1,incoming:1},charge:{name:'突撃',damage:1.2,speed:1.2,incoming:1.2},rally:{name:'集合',damage:.85,speed:1.3,incoming:.8},hold:{name:'死守',damage:1,speed:.5,incoming:.65}};
 export const DIFFICULTY={normal:{name:'正騎士',note:'最初の戦い',enemyHp:.75,enemyDamage:.9,attackGap:1.25,bonus:0}};
-export const SKILLS={stake:{name:'縫い留め',cooldown:18,crest:'✣',quote:'血海よ、彼の足を縫い留めよ。'},lance:{name:'ジョスト',cooldown:15,crest:'✝',quote:'この十字架に誓う――穿ち貫け！'},guard:{name:'不退の誓い',cooldown:20,crest:'✠',quote:'我らの旗は、退かぬ。'}};
+export const SKILLS={stake:{name:'縫い留め',cooldown:18,crest:'✣',quote:'血海よ、彼の足を縫い留めよ。'},lance:{name:'ジョスト',cooldown:15,crest:'✝',quote:'刻めよ、我が名を',declare:true},guard:{name:'不退の誓い',cooldown:20,crest:'✠',quote:'我らの旗は、退かぬ。'}};
 export const FLAGSHIP='lance';
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
