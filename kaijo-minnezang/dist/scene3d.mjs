@@ -43,11 +43,12 @@ export function buildScene(b,selected='lance',showRange=false){
   if(s.id==='stake'){
    for(const z of [-10,10]){local(g,'box',[27,22,z],[35,7,7],C.dark);local(g,'box',[39,25,z],[44,2,2],C.bone);local(g,'box',[23,26,z],[5,10,14],trim);}
   }else if(s.id==='lance'){
-   local(g,'box',[22,23,0],[33,13,19],trim);local(g,'box',[30,24,0],[24,9,12],C.dark);
-   const t=s.lunge?.age||0,extend=s.lunge?(t<.22?t/.22:t<.45?1:Math.max(0,(.95-t)/.5)):0,len=44+extend*62;
-   local(g,'box',[26+len/2,24,0],[len,4,4],C.bone);local(g,'cone',[30+len,24,0],[1,1,1],C.bone);
-   limb(g,[22,24,0],[32+len,24,0],3,C.bone);
-   draw('cone',multiply(g,segmentMatrix([32+len,24,0],[49+len,24,0],8)),[.94,.90,.69,1]);
+   const coffin=[.12,.08,.08,1],ivory=[.86,.84,.80,1];
+   local(g,'box',[30,24,0],[44,9,17],coffin);local(g,'box',[30,29,0],[46,1.2,19],trim);local(g,'box',[30,30,0],[40,1,3],trim);local(g,'box',[24,30,0],[3,1,12],trim);
+   local(g,'box',[53,24,0],[2,10,20],trim);local(g,'box',[7,24,0],[2,10,20],trim);
+   const t=s.lunge?.age||0,extend=s.lunge?(t<.22?t/.22:t<.45?1:Math.max(0,(.95-t)/.5)):0,r=8+extend*62;
+   local(g,'box',[r+25,26,0],[50,3.4,3.4],ivory);local(g,'box',[r+39,26,0],[3.4,3.4,26],ivory);
+   draw('cone',multiply(g,segmentMatrix([r+50,26,0],[r+68,26,0],3.4)),ivory);
    if(b.joust){for(const z of [-20,20])local(g,'cone',[-73,13,z],[10,32,10],[.98,.66,.20,.55],0,.7);}
   }else{
    local(g,'box',[44,31,0],[8,42,66],C.blue);local(g,'box',[49,32,0],[2,34,5],C.bone);local(g,'box',[49,35,0],[2,5,31],C.bone);
