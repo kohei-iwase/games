@@ -34,16 +34,38 @@ export function epilogue(r){
  return {title:r.result==='victory'?'凱歌':'撤退の歌',note:RANK_NOTE[r.rank],lines};
 }
 
-// 連戦の1戦ごとの結果（Battle.report() か simulate() の戻り値）を、勝敗の見出しと説明にする。
+// 1戦ごとの結果（Battle.report() か simulate() の戻り値）を、勝敗の見出しと説明にする。敵の名前と旗艦の名前は報告から読む。
 export function battleVerdict(r){
- if(r.decided==='kill')return {kind:'kill',title:'撃破',stamp:'討',note:'ネフェリムは血海に沈んだ。'};
- if(r.decided==='judge')return r.result==='victory'?{kind:'win',title:'判定勝ち',stamp:'勝',note:'与えた損害が上回った。ネフェリムを押し返した。'}:{kind:'push',title:'判定負け',stamp:'負',note:'艦隊は押し戻された。ネフェリムの傷はそのまま、次の戦いへ。'};
- return {kind:'retreat',title:'撤退',stamp:'退',note:'旗艦ミラルカ辺境伯が戦闘不能。艦隊は撤退する。'};
+ const foe=r.enemyKind==='kin'?'眷属の群れ':'ネフェリム';
+ if(r.decided==='kill')return {kind:'kill',title:'撃破',stamp:'討',note:`${foe}は血海に沈んだ。`};
+ if(r.decided==='judge')return r.result==='victory'?{kind:'win',title:'判定勝ち',stamp:'勝',note:`与えた損害が上回った。${foe}を押し返した。`}:{kind:'push',title:'判定負け',stamp:'負',note:`艦隊は押し戻された。${foe}の傷はそのまま、海図へ戻る。`};
+ return {kind:'retreat',title:'撤退',stamp:'退',note:r.decided==='wiped'?'艦隊は壊滅した。':`旗艦${r.ships?.[0]?.name||'ミラルカ辺境伯'}が戦闘不能。艦隊は撤退する。`};
 }
 // 連戦全体の戦果。epilogue/hints/saveRecord がそのまま読める形にまとめる。ランクはネフェリム撃破までの戦闘回数で決める。
 export function campaignReport(list,won){
  const last=list[list.length-1],sum=k=>list.reduce((n,r)=>n+(r[k]||0),0),n=list.length;
  return {result:won?'victory':'defeat',decided:last.decided,difficulty:last.difficulty,battles:n,rank:won?n<=3?'S':n===4?'A':n===5?'B':'C':'—',score:won?Math.max(0,100-n*10+Math.min(15,sum('perfect')*3)):0,time:sum('time'),form:last.form,ships:last.ships,combos:sum('combos'),perfect:sum('perfect'),joustHits:sum('joustHits'),taken:sum('taken'),dealtTotal:sum('dealtTotal'),totalBlood:sum('totalBlood'),dealt:{bleed:list.reduce((m,r)=>m+(r.dealt?.bleed||0),0)},island:100,lost:won?null:'flagship'};
+}
+
+// 戦略マップ全体の戦果。epilogue/hints/saveRecord がそのまま読める形にする。history はこれまでの戦闘の報告。
+// 評価は勝利時のみ：100点から、沈めた艦（−10）、峰の灯の損傷（−0.3/点）、5分を超えた分（−1/10秒）、7戦目以降（−2/戦）を引く。S85・A72・B58。
+const START_SHIPS=['lance','stake','escort','guard','escort','escort'];
+export function strategyReport(st,history){
+ const won=st.result==='victory',left=st.fleets.flatMap(f=>f.ships.map(x=>x.type)),sum=k=>history.reduce((n,r)=>n+(r[k]||0),0);
+ const ships=START_SHIPS.map(id=>{const i=left.indexOf(id);if(i>=0)left.splice(i,1);return {id,name:id==='escort'?'随伴艦':NAMES[id],sunk:i<0}}),sunk=ships.filter(x=>x.sunk).length,lamp=Math.ceil(st.lamp.hp),time=Math.round(st.time);
+ const score=won?Math.max(0,Math.round(100-sunk*10-(100-lamp)*.3-Math.max(0,time-300)/10-Math.max(0,st.battles-6)*2)):0;
+ const nep=history.filter(r=>r.enemyKind!=='kin').pop();
+ return {result:won?'victory':'defeat',decided:st.lamp.hp<=0?'island':'flagship',difficulty:'normal',battles:st.battles,rank:won?score>=85?'S':score>=72?'A':score>=58?'B':'C':'—',score,time,form:nep?.form||1,ships,combos:sum('combos'),perfect:sum('perfect'),joustHits:sum('joustHits'),taken:sum('taken'),dealtTotal:sum('dealtTotal'),totalBlood:sum('totalBlood'),dealt:{bleed:history.reduce((m,r)=>m+(r.dealt?.bleed||0),0)},island:lamp,lost:won?null:st.lamp.hp<=0?'island':'flagship'};
+}
+// 戦略マップ用の助言（最大2件）。
+export function strategyHints(r){
+ const h=[];
+ if(r.lost==='island')h.push('ネフェリムが島のそばに着くと、峰の灯が毎秒3削られます。浅瀬で足が鈍る間に、ミラルカの艦隊をぶつけて押し戻しましょう。');
+ if(r.lost==='flagship')h.push('ミラルカ辺境伯が沈むと敗北です。傷ついたら峰の灯のそばで補給（毎秒2%回復）してから挑みましょう。');
+ if(r.result!=='victory'&&r.battles<=1)h.push('艦隊は海図上でいつでも動かせます。ポーズ中に移動先を決め、ネフェリムには主力艦隊、眷属には別働隊を当てましょう。');
+ if(r.result==='victory'&&r.ships.some(x=>x.sunk))h.push('沈んだ艦は戻りません。同格の眷属は別働隊に任せ、無理な追撃は避けましょう。');
+ if(r.result==='victory'&&r.rank!=='S')h.push('評価は、沈めた艦の少なさ、峰の灯の無傷、所要時間で決まります。');
+ return h.slice(0,2);
 }
 
 export function hints(r){
@@ -63,7 +85,7 @@ export function loadRecords(){try{return JSON.parse(localStorage.getItem(KEY))||
 // Returns whether this result beats the stored best for its difficulty.
 export function saveRecord(r){
  const records=loadRecords(),old=records[r.difficulty];
- const faster=r.battles&&old?.battles?r.battles<old.battles:r.time<old?.time;
+ const faster=r.battles&&old?.battles&&r.battles!==old.battles?r.battles<old.battles:r.time<old?.time;
  const better=!old||ORDER.indexOf(r.rank)<ORDER.indexOf(old.rank)||(r.rank===old.rank&&r.result==='victory'&&faster);
  if(better){records[r.difficulty]={rank:r.rank,time:r.time,score:r.score,battles:r.battles};try{localStorage.setItem(KEY,JSON.stringify(records))}catch{}}
  return better;
