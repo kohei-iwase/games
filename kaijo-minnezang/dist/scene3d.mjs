@@ -1,6 +1,6 @@
 import {model,multiply,segmentMatrix,world,TAU,clamp} from './space3d.mjs';
 const C={stone:[.40,.47,.51,1],dark:[.07,.12,.17,1],gold:[.70,.52,.25,1],bone:[.70,.72,.62,1],teal:[.28,.68,.64,1],blue:[.30,.48,.76,1],blood:[.64,.075,.23,1]};
-export function buildScene(b,selected='stake',showRange=false){
+export function buildScene(b,selected='lance',showRange=false){
  const solid=[],transparent=[];
  function draw(mesh,m,color,glow=0,water=0){(color[3]<1?transparent:solid).push({mesh,model:Array.from(m),color,glow,water})}
  const item=(mesh,p,scale,color,angle=0,glow=0)=>draw(mesh,model(p,scale,angle),color,glow);

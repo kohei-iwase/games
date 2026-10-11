@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ゲーム制作用のリポジトリ。現在の作品は `kaijo-minnezang/`（海城のミンネザング、3D戦術海戦の試作）のみ。詳細は各ディレクトリの README を参照。ルートの `.gitignore` はUnity用テンプレートだが、現行プロジェクトはUnityではなく素のWebGL + ES Modules。
 
-ドキュメントやゲーム内テキストは日本語で書かれている。
+このリポジトリは原則日本語で表示する。ゲーム内の表示テキスト（ラベル・見出し・ボタン等）、ドキュメント、コミットメッセージ、PRの説明は日本語で書く。キー名（Space, F, Q/W/E）など、英字のほうが自然なものは例外。
 
 ## ブランチ運用
 

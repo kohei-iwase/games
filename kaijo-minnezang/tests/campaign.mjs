@@ -4,9 +4,9 @@ import {PROLOGUE,epilogue,hints,loadRecords,saveRecord} from '../dist/campaign.m
 const store=new Map();globalThis.localStorage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v))};
 assert(PROLOGUE.lines.length>0);
 const win=new Battle();win.start();win.enemy.hp=1;win.hitEnemy(10,'stake',win.ship('stake'));const w=win.report();
-const lose=new Battle();lose.start();lose.damageShip(lose.ship('stake'),9999,null);const l=lose.report();
+const lose=new Battle();lose.start();lose.damageShip(lose.ship('lance'),9999,null);const l=lose.report();
 assert.equal(epilogue(w).title,'凱歌');assert.equal(epilogue(l).title,'撤退の歌');
-assert(hints(l).some(h=>h.includes('茨卿')));
+assert(hints(l).some(h=>h.includes('白鷺卿')));
 assert.equal(saveRecord(l),true);assert.equal(saveRecord(w),true);assert.equal(loadRecords().normal.rank,w.rank);
 assert.equal(saveRecord(l),false,'a defeat never replaces a victory');
 delete globalThis.localStorage;assert.deepEqual(loadRecords(),{});assert.equal(typeof saveRecord(w),'boolean');
