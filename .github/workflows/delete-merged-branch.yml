@@ -1,16 +1,21 @@
 name: Delete merged branch
 
-# PR がマージされたら head ブランチを削除する。main / develop と、フォークからの PR は対象外。
+# マージ済みの作業ブランチを削除する。main / develop は対象外。
+# - PR がマージされたとき：その head ブランチ（フォークからの PR は除く）
+# - develop に直接マージがプッシュされたとき：取り込まれたブランチのうち、先端がマージ時のコミットのままのもの
 on:
   pull_request:
     types: [closed]
+  push:
+    branches: [develop]
 
 permissions:
   contents: write
 
 jobs:
-  delete:
+  pr:
     if: >-
+      github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref != 'main' &&
@@ -22,3 +27,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ github.event.pull_request.head.ref }}
         run: gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${BRANCH}" || echo "branch already deleted"
+
+  push:
+    if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete branches merged by this push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          # このプッシュで入ったマージコミットの、第2親以降（取り込まれた側）のコミット
+          merged=$(git rev-list --merges --parents "$BEFORE..$AFTER" | awk '{for (i = 3; i <= NF; i++) print $i}' | sort -u)
+          [ -n "$merged" ] || { echo "no merge commits"; exit 0; }
+          git for-each-ref --format='%(objectname) %(refname:lstrip=3)' refs/remotes/origin |
+            while read -r sha branch; do
+              case "$branch" in main|develop|HEAD) continue ;; esac
+              if printf '%s\n' "$merged" | grep -qx "$sha"; then
+                echo "delete $branch ($sha)"
+                gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${branch}" || echo "failed to delete $branch"
+              fi
+            done
