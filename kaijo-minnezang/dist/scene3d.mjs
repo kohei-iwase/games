@@ -16,6 +16,7 @@ export function buildScene(b,selected='lance',showRange=false){
  for(const [x,y,s] of [[-30,80,70],[1015,555,75],[-80,590,56],[1070,10,42],[220,-105,35]]){item('sphere',world(x,y,-8),[s,s*.75,s*.8],[.12,.19,.22,1]);item('cone',world(x+5,y,24),[s*.4,s*.6,s*.4],[.22,.29,.29,1]);}
  const rally=b.pending==='rally'?(b.pendingRally||b.rally):b.order==='rally'?b.rally:null;
  if(rally){ring(rally.x,rally.y,30,[.91,.77,.40,.95]);line(world(rally.x-40,rally.y,6),world(rally.x+40,rally.y,6),1.5,[.91,.77,.40,1]);line(world(rally.x,rally.y-40,6),world(rally.x,rally.y+40,6),1.5,[.91,.77,.40,1]);}
+ for(const s of b.ships){if(s.hp<=0)continue;const c={stake:[.78,.47,.25],lance:[.85,.87,.90],guard:[.59,.74,.95]}[s.id];for(const [w,al] of [[s.waypoint,.95],[s.pendingWaypoint,.5]])if(w){ring(w.x,w.y,22,[...c,al],5);ring(w.x,w.y,10,[...c,al],5)}}
  const entry=b.joust?.entry||b.entry;
  if(entry&&(b.joust||b.pendingSkills.includes('lance'))){ring(entry.x,entry.y,20,[.98,.8,.4,1]);const a=world(entry.x,entry.y,5),z=world(b.enemy.x,b.enemy.y,5);for(let i=0;i<24;i+=2)line(a.map((v,k)=>v+(z[k]-v)*i/24),a.map((v,k)=>v+(z[k]-v)*(i+1)/24),1.3,[.98,.8,.4,.8]);}
  for(const s of b.ships){
