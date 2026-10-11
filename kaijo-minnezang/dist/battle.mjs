@@ -1,8 +1,10 @@
 export const WIDTH=1000, HEIGHT=650;
 export const ORDERS={balanced:{name:'航戦',damage:1,speed:1,incoming:1},charge:{name:'突撃',damage:1.2,speed:1.2,incoming:1.2},rally:{name:'集合',damage:.85,speed:1.3,incoming:.8},hold:{name:'死守',damage:1,speed:.5,incoming:.65}};
 export const DIFFICULTY={normal:{name:'正騎士',note:'最初の戦い',enemyHp:.75,enemyDamage:.9,attackGap:1.25,bonus:0}};
-export const SKILLS={stake:{name:'縫い留め',cooldown:18,crest:'✣',quote:'血海よ、彼の足を縫い留めよ。'},lance:{name:'ジョスト',cooldown:15,crest:'✝',quote:'刻めよ、我が名を',declare:true},guard:{name:'不退の誓い',cooldown:20,crest:'✠',quote:'我らの旗は、退かぬ。'}};
+export const SKILLS={stake:{name:'縫い留め',cooldown:18,crest:'✣',quote:'老いぼれの杭、まだ錆びてはおらぬ。'},lance:{name:'ジョスト',cooldown:15,crest:'✝',quote:'刻めよ、我が名を',declare:true},guard:{name:'不退の誓い',cooldown:20,crest:'✠',quote:'この身が、皆さまの盾にございます。'}};
 export const FLAGSHIP='lance';
+// 騎士の表示名。台詞（campaign.mjs）からも参照する。盾持ちの従騎士は「鉄壁の○○」の二つ名で呼ぶ（名前は未定のため仮）。
+export const NAMES={stake:'茨卿',lance:'ミラルカ辺境伯',guard:'鉄壁の従騎士'};
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const point=p=>({x:clamp(p.x,45,955),y:clamp(p.y,45,605)});
@@ -15,7 +17,7 @@ export class Battle{
   this.seq=0;this.logs=[];this.effects=[];this.shots=[];this.pools=[];this.pauseRequests=[];this.result=null;this.totalBlood=0;this.guardUntil=0;this.bloodNotified=false;this.combo=false;this.lastTiming='';
   this.reason='三騎士、出撃準備';this.detail='戦闘開始 → 杭で血域を作る → スキルを予約。定期ポーズはありません。';
   this.enemy={x:745,y:270,hp:Math.round(1000*d.enemyHp),maxHp:Math.round(1000*d.enemyHp),form:1,bleed:0,bleedUntil:0,dotClock:0,hitUntil:0,attack:null,nextAttack:4,recoveryUntil:0,rootUntil:0,pierced:false,angle:2.65,attackCount:0};
-  this.ships=[{id:'stake',name:'茨卿',role:'杭射出・失血',short:'杭役',x:230,y:300,maxHp:250,range:570,speed:64,color:'#90d9ce'}, {id:'lance',name:'ミラルカ辺境伯',role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#d9dde6',accent:'#b3123a'}, {id:'guard',name:'赤楯卿',role:'防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}].map(s=>({...s,hp:s.maxHp,angle:-.3,hitUntil:0,critical:false,sunk:false,windup:null,lunge:null,holdPoint:null,cooldown:1,skillCd:0,blood:0,speedNow:0,status:'出撃待機'}));
+  this.ships=[{id:'stake',name:NAMES.stake,role:'補佐・杭射出・失血',short:'補佐',x:230,y:300,maxHp:250,range:570,speed:64,color:'#90d9ce'}, {id:'lance',name:'ミラルカ辺境伯',role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#d9dde6',accent:'#b3123a'}, {id:'guard',name:NAMES.guard,role:'従騎士・防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}].map(s=>({...s,hp:s.maxHp,angle:-.3,hitUntil:0,critical:false,sunk:false,windup:null,lunge:null,holdPoint:null,cooldown:1,skillCd:0,blood:0,speedNow:0,status:'出撃待機'}));
   this.log('血海で蓄血し、三騎士の技を重ねよ。');
  }
  ship(id){return this.ships.find(s=>s.id===id)}
