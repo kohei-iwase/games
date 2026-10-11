@@ -30,6 +30,7 @@ let now=performance.now();const frame=()=>{now+=50;callback(now)};
 assert.equal(nodes.get('statusText').textContent,'出撃準備');
 frame();assert(nodes.get('renderError').hidden,'renderer initializes');const vp=lastVP.slice();nodes.get('zoomIn').onclick();frame();assert.notDeepEqual(lastVP,vp);nodes.get('cameraReset').onclick();frame();assert.deepEqual(lastVP,vp);
 
+assert(!nodes.get('story').hidden,'prologue shown first');nodes.get('playBtn').onclick();assert(nodes.get('story').hidden,'first play closes the prologue');assert.equal(nodes.get('statusText').textContent,'出撃準備');
 nodes.get('playBtn').onclick();
 for(let i=0;i<150;i++)frame();assert.equal(nodes.get('statusText').textContent,'戦術ポーズ');
 for(const btn of skillButtons){assert(!btn.disabled);btn.onclick();}
