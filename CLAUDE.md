@@ -45,7 +45,7 @@ python3 -m http.server 8000 --directory kaijo-minnezang/dist
 
 # テスト（kaijo-minnezang/ で実行。各ファイルが単体のテストスクリプトで、assert失敗で非ゼロ終了）
 cd kaijo-minnezang
-node tests/combat.mjs       # 戦闘ルール（Battle）、難易度、戦果報告
+node tests/combat.mjs       # 戦闘ルール（Battle）、難易度（現在は正騎士の1段階）、戦果報告
 node tests/campaign.mjs     # エピローグ・助言・記録保存（localStorageはテスト内でモック）
 node tests/geometry3d.mjs   # カメラ・座標の往復変換、メッシュの有限値。/tmp/minnezang-3d-scene.json を出力
 ```
