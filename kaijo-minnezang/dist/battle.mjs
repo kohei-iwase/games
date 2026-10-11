@@ -3,8 +3,8 @@ export const ORDERS={balanced:{name:'航戦',damage:1,speed:1,incoming:1},charge
 export const DIFFICULTY={normal:{name:'正騎士',note:'最初の戦い',enemyHp:.75,enemyDamage:.9,attackGap:1.25,bonus:0}};
 export const SKILLS={stake:{name:'縫い留め',cooldown:18,crest:'✣',quote:'老いぼれの杭、まだ錆びてはおらぬ。'},lance:{name:'ジョスト',cooldown:15,crest:'✝',quote:'刻めよ、我が名を',declare:true},guard:{name:'不退の誓い',cooldown:20,crest:'✠',quote:'この身が、皆さまの盾にございます。'}};
 export const FLAGSHIP='lance';
-// 騎士の表示名。台詞（campaign.mjs）からも参照する。盾持ちの従騎士は「鉄壁の○○」の二つ名で呼ぶ（名前は未定のため仮）。
-export const NAMES={stake:'茨卿',lance:'ミラルカ辺境伯',guard:'鉄壁の従騎士'};
+// 騎士の表示名。台詞（campaign.mjs）からも参照する。カナン卿はオリーヴェの祖父。
+export const NAMES={stake:'カナン卿',lance:'ミラルカ辺境伯',guard:'堅牢なるオリーヴェ'};
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const point=p=>({x:clamp(p.x,45,955),y:clamp(p.y,45,605)});
@@ -42,7 +42,7 @@ export class Battle{
  advancePresentation(dt){if(this.mode==='cutin'){this.cutin.age+=dt;if(this.cutin.age>=(this.shortCutin?.16:.55)){this.cutin.age=0;if(++this.cutin.index>=this.cutin.ids.length)this.finishCutins()}}else if(this.mode==='running'&&this.timing){this.timing.progress=Math.min(1,this.timing.progress+dt/1.4);if(this.autoTiming&&!this.timing.pressed&&this.timing.progress>=.72)this.pressTiming();if(this.timing.progress>=1)this.fireJoust()}}
  finishCutins(){if(!this.cutin)return;const ids=this.cutin.ids;this.cutin=null;this.mode='running';this.activateSkills(ids)}
  activateSkills(ids){this.combo=ids.includes('stake')&&ids.includes('lance');for(const id of ids){const s=this.ship(id);if(this.skillIssue(id))continue;s.skillCd=SKILLS[id].cooldown;this.log(`${s.name}〈${SKILLS[id].name}〉発動。`,'order');if(id==='stake'){this.enemy.rootUntil=this.time+10;this.enemy.pierced=true;this.enemy.bleed=Math.min(5,this.enemy.bleed+2);this.enemy.bleedUntil=this.time+14;this.effect('roots',this.enemy.x,this.enemy.y,{life:1.2,color:'#e27da4'});}if(id==='guard'){this.guardUntil=this.time+8;this.effect('shield',s.x,s.y,{life:1,color:s.color});}if(id==='lance'){s.windup=null;s.lunge=null;const a=Math.atan2(s.y-this.enemy.y,s.x-this.enemy.x),entry=this.entry?{...this.entry}:distance(s,this.enemy)<240?point({x:this.enemy.x+Math.cos(a)*330,y:this.enemy.y+Math.sin(a)*330}):null;this.joust={phase:entry?'approach':'charge',entry,speed:0,age:0};}}
- if(this.combo)this.log('連携〈茨の馬上槍試合〉：拘束杭をジョストで砕け。','lance')}
+ if(this.combo)this.log('連携〈杭と十字架の馬上槍試合〉：拘束杭をジョストで砕け。','lance')}
  pressTiming(){if(!this.timing||this.timing.pressed||this.mode!=='running')return false;this.timing.pressed=true;const d=Math.abs(this.timing.progress-.75);this.timing.bonus=d<=.13?1.5:1;if(d<=.13)this.stats.perfect++;this.lastTiming=d<=.13?'会心 ×1.5':'通常射出 — ペナルティなし';return true}
  fireJoust(){if(!this.joust||!this.timing)return;const s=this.ship('lance');const bonus=this.timing.bonus||1;this.lastTiming=this.timing.pressed?this.lastTiming:'自動射出';this.label(s.x,s.y-75,this.lastTiming,'#f7d798');this.joust.phase='strike';this.joust.damage=(65+this.joust.speed*.65)*bonus*ORDERS[this.order].damage*(1+Math.floor(s.blood/25)*.15);s.lunge={age:0};this.timing=null}
  protected(s){const g=this.ship('guard');return g.hp>0&&this.time<this.guardUntil&&distance(s,g)<=235}

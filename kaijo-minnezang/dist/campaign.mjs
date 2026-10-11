@@ -6,7 +6,7 @@ export const PROLOGUE={
  place:'黒潮海域 · 夜明け前',
  lines:[
   {speaker:NAMES.guard,text:'見張りより報せでございます。黒潮の底から、ネフェリムが浮上いたしました。'},
-  {speaker:'茨卿',text:'ならば、まずは血を流させましょうぞ、辺境伯。海に血が満ちれば、城の渇きも癒えまする。'},
+  {speaker:NAMES.stake,text:'ならば、まずは血を流させましょうぞ、辺境伯。海に血が満ちれば、城の渇きも癒えまする。……オリーヴェ、前に出すぎるでないぞ。'},
   {speaker:'ミラルカ辺境伯',text:'全艦、ボクに続け！ 血の海ごと、あのデカブツを十字架でぶち抜いてやる。……ローラ、すぐ帰るからね。'},
   {speaker:NAMES.guard,text:'旗を掲げます。辺境伯さまが沈めば艦隊は退くほかございません――杭の前に出られても、辺境伯さまの盾はわたくしが務めます。'}
  ]
@@ -18,14 +18,14 @@ export function epilogue(r){
  const sunk=r.ships.filter(s=>s.sunk).map(s=>s.name),lines=[];
  if(r.result==='victory'){
   lines.push({speaker:'ミラルカ辺境伯',text:r.rank==='S'||r.rank==='A'?'勝鬨だ！ ねえローラ、聞こえた？ 今夜の勝ちは、ぜんぶキミにあげる。':'勝ちは勝ち！ ……でも次は、一発で仕留めてみせるからな。'});
-  if(sunk.includes('茨卿'))lines.push({speaker:NAMES.guard,text:'茨卿の城が傾いております。曳航いたしましょう、あの杭はまだ要ります。'});
-  else if(r.combos>=3)lines.push({speaker:'茨卿',text:`わしの杭を、辺境伯の十字架が${r.combos}度打ち砕きましたな。……先代にもお見せしたかった。`});
-  else lines.push({speaker:'茨卿',text:'血は充分、城壁が歌っておりますぞ。杭が縫い留めた一瞬、次も逃されませぬよう。'});
+  if(sunk.includes(NAMES.stake))lines.push({speaker:NAMES.guard,text:'お祖父さまの城が傾いております。曳航いたしましょう、あの杭はまだ要ります。'});
+  else if(r.combos>=3)lines.push({speaker:NAMES.stake,text:`わしの杭を、辺境伯の十字架が${r.combos}度打ち砕きましたな。……先代にもお見せしたかった。`});
+  else lines.push({speaker:NAMES.stake,text:'血は充分、城壁が歌っておりますぞ。杭が縫い留めた一瞬、次も逃されませぬよう。'});
   if(sunk.includes(NAMES.guard))lines.push({speaker:'ミラルカ辺境伯',text:'……盾は砕けても、キミの誓いは砕けてないよ。絶対に連れて帰る。'});
   else lines.push({speaker:NAMES.guard,text:r.taken>600?'被害は軽くございません。ですが、旗は一度も下ろしておりません。':'損害軽微。旗を畳み、帰港いたします。'});
  }else{
   lines.push({speaker:NAMES.guard,text:'旗艦が沈みます！ 辺境伯さまをお曳きして――全艦、旗を降ろせ、撤退です！'});
-  lines.push({speaker:'茨卿',text:r.form===2?'あと一息でしたな。第二形態の墜落に、血を吸われすぎ申した。':'血が足りませなんだ。杭で縫い、十字架を合わせる機を、もう一度探りましょうぞ。'});
+  lines.push({speaker:NAMES.stake,text:r.form===2?'あと一息でしたな。第二形態の墜落に、血を吸われすぎ申した。':'血が足りませなんだ。杭で縫い、十字架を合わせる機を、もう一度探りましょうぞ。'});
   lines.push({speaker:'ミラルカ辺境伯',text:'退くのは今夜だけだ！ ローラの鼓動が続く限り、ボクは何度だってこの海に戻ってくる！'});
  }
  return {title:r.result==='victory'?'凱歌':'撤退の歌',note:RANK_NOTE[r.rank],lines};
