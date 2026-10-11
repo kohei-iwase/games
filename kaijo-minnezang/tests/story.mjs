@@ -8,9 +8,9 @@ const tests=[];function test(n,f){f();tests.push(n)}
 test('3つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
  const p=load('prologue'),c=load('contact-nephilim'),i=load('interlude-lamp');
  for(const s of [p,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{bg:1,narr:2,sfx:2,enter:3,say:13,fx:2,exit:2});
+ assert.deepEqual(count(p),{bg:1,narr:2,sfx:2,enter:3,say:19,fx:2,exit:2});
  assert.deepEqual(count(c),{bg:1,sfx:2,fx:2,narr:1,enter:2,say:5});
- assert.deepEqual(count(i),{bg:1,narr:3,enter:2,say:11,sfx:2});
+ assert.deepEqual(count(i),{bg:1,narr:3,enter:2,say:18,sfx:2});
  assert.equal(p[0].type,'bg');assert.equal(p[0].value,'sea');assert.equal(i[0].value,'chart')});
 test('名前の解決：短縮形も表示名も同じ人物、未知の名前は札だけ',()=>{
  for(const [a,key,name] of [['ミラルカ','lance','ミラルカ辺境伯'],['ミラルカ辺境伯','lance','ミラルカ辺境伯'],['カナン','stake','カナン卿'],['カナン卿','stake','カナン卿'],['オリーヴェ','guard','堅牢なるオリーヴェ'],['堅牢なるオリーヴェ','guard','堅牢なるオリーヴェ']]){const w=resolveName(a);assert.equal(w.key,key);assert.equal(w.name,name);assert.equal(w.art,CHARACTERS[key].art)}
