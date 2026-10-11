@@ -15,7 +15,7 @@ export class Battle{
   this.seq=0;this.logs=[];this.effects=[];this.shots=[];this.pools=[];this.pauseRequests=[];this.result=null;this.totalBlood=0;this.guardUntil=0;this.bloodNotified=false;this.combo=false;this.lastTiming='';
   this.reason='三騎士、出撃準備';this.detail='戦闘開始 → 杭で血域を作る → スキルを予約。定期ポーズはありません。';
   this.enemy={x:745,y:270,hp:Math.round(1000*d.enemyHp),maxHp:Math.round(1000*d.enemyHp),form:1,bleed:0,bleedUntil:0,dotClock:0,hitUntil:0,attack:null,nextAttack:4,recoveryUntil:0,rootUntil:0,pierced:false,angle:2.65,attackCount:0};
-  this.ships=[{id:'stake',name:'茨卿',role:'杭射出・失血',short:'杭役',x:230,y:300,maxHp:250,range:570,speed:64,color:'#90d9ce'}, {id:'lance',name:'ミラルカ辺境伯',role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#efce83'}, {id:'guard',name:'赤楯卿',role:'防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}].map(s=>({...s,hp:s.maxHp,angle:-.3,hitUntil:0,critical:false,sunk:false,windup:null,lunge:null,holdPoint:null,cooldown:1,skillCd:0,blood:0,speedNow:0,status:'出撃待機'}));
+  this.ships=[{id:'stake',name:'茨卿',role:'杭射出・失血',short:'杭役',x:230,y:300,maxHp:250,range:570,speed:64,color:'#90d9ce'}, {id:'lance',name:'ミラルカ辺境伯',role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#d9dde6',accent:'#b3123a'}, {id:'guard',name:'赤楯卿',role:'防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}].map(s=>({...s,hp:s.maxHp,angle:-.3,hitUntil:0,critical:false,sunk:false,windup:null,lunge:null,holdPoint:null,cooldown:1,skillCd:0,blood:0,speedNow:0,status:'出撃待機'}));
   this.log('血海で蓄血し、三騎士の技を重ねよ。');
  }
  ship(id){return this.ships.find(s=>s.id===id)}
