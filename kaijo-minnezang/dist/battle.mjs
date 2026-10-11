@@ -11,7 +11,7 @@ export class Battle{
  constructor(options={}){
   this.difficulty=DIFFICULTY[options.difficulty]?options.difficulty:'normal';const d=this.tuning=DIFFICULTY[this.difficulty];
   this.stats={combos:0,perfect:0,joustHits:0,pauses:0,taken:0,dealt:{stake:0,lance:0,bleed:0}};
-  this.time=0;this.mode='ready';this.order='balanced';this.pending=null;this.rally=null;this.pendingRally=null;this.pendingSkills=[];this.entry=null;this.cutin=null;this.joust=null;this.timing=null;this.autoTiming=false;this.shortCutin=false;
+  this.time=0;this.mode='ready';this.order='balanced';this.pending=null;this.rally=null;this.pendingRally=null;this.pendingSkills=[];this.entry=null;this.cutin=null;this.joust=null;this.timing=null;this.autoTiming=false;this.shortCutin=false;this.autoPause=options.autoPause??true;this.notice=null;
   this.seq=0;this.logs=[];this.effects=[];this.shots=[];this.pools=[];this.pauseRequests=[];this.result=null;this.totalBlood=0;this.guardUntil=0;this.bloodNotified=false;this.combo=false;this.lastTiming='';
   this.reason='三騎士、出撃準備';this.detail='戦闘開始 → 杭で血域を作る → スキルを予約。定期ポーズはありません。';
   this.enemy={x:745,y:270,hp:Math.round(2100*d.enemyHp),maxHp:Math.round(2100*d.enemyHp),form:1,bleed:0,bleedUntil:0,dotClock:0,hitUntil:0,attack:null,nextAttack:4,recoveryUntil:0,rootUntil:0,pierced:false,angle:2.65,attackCount:0};
@@ -22,9 +22,9 @@ export class Battle{
  log(text,type='info'){this.logs.unshift({id:++this.seq,time:this.time,text,type});this.logs=this.logs.slice(0,35)}
  effect(type,x,y,extra={}){this.effects.push({id:++this.seq,type,x,y,age:0,life:.8,...extra})}
  label(x,y,text,color='#fff'){this.effect('label',x,y,{text,color,life:1.7})}
- queuePause(title,body,priority=0){this.pauseRequests.push({title,body,priority})}
+ queuePause(title,body,priority=0){if(!this.autoPause){if(!this.notice||this.notice.until<=this.time||priority>=this.notice.priority)this.notice={title,body,priority,until:this.time+3.5};this.log(title,'pause');return}this.pauseRequests.push({title,body,priority})}
  flushPause(){if(this.mode==='ended'){this.pauseRequests=[];return}if(!this.pauseRequests.length)return;const a=this.pauseRequests.sort((a,b)=>b.priority-a.priority);this.reason=a.map(p=>p.title).join(' ／ ');this.detail=a[0].body;this.mode='paused';this.stats.pauses++;this.log(this.reason,'pause');this.pauseRequests=[]}
- pause(title='戦術ポーズ',body='旗・集合地点・スキルを予約して再開してください。'){if(this.mode!=='running')return;this.queuePause(title,body);this.flushPause()}
+ pause(title='戦術ポーズ',body='旗・集合地点・スキルを予約して再開してください。'){if(this.mode!=='running')return;this.pauseRequests.push({title,body,priority:0});this.flushPause()}
  canPlan(){return ['ready','paused'].includes(this.mode)}
  setOrder(o){if(!this.canPlan()||!ORDERS[o])return false;this.pending=o;return true}
  setRally(x,y){if(!this.canPlan()||this.pending!=='rally')return false;this.pendingRally=point({x,y});return true}
