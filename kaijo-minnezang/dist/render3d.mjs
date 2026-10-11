@@ -37,7 +37,7 @@ export class SeaRenderer {
   if(this.canvas.width!==Math.round(w*dpr)||this.canvas.height!==Math.round(h*dpr)){this.canvas.width=Math.round(w*dpr);this.canvas.height=Math.round(h*dpr);this.overlay.width=this.canvas.width;this.overlay.height=this.canvas.height;}
   this.follow(b);this.updateCamera(b);gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);const u=this.locations;gl.uniformMatrix4fv(u.uVP,false,this.camera.vp);gl.uniform3fv(u.uEye,this.camera.eye);gl.uniform1f(u.uTime,b.time);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   if(this.lastBattle!==b||Math.abs(b.time-this.bloodTime)>.25){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,96,96,0,gl.RGBA,gl.UNSIGNED_BYTE,bloodTexture(b));this.bloodTime=b.time;this.lastBattle=b;}
-  const scene=buildScene(b,selected,showRange);gl.disable(gl.BLEND);gl.depthMask(true);for(const obj of scene.solid)this.draw(obj);
+  const scene=buildScene(b,selected,showRange,performance.now()/1000);gl.disable(gl.BLEND);gl.depthMask(true);for(const obj of scene.solid)this.draw(obj);
   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
   const eye=this.camera.eye;scene.transparent.sort((a,z)=>{const dist=o=>Math.hypot(o.model[12]-eye[0],o.model[13]-eye[1],o.model[14]-eye[2]);return dist(z)-dist(a)});for(const obj of scene.transparent)this.draw(obj);gl.depthMask(true);
   this.labels(b,selected,w,h,dpr);
