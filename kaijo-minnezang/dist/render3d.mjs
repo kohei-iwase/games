@@ -1,10 +1,11 @@
 import {meshes,normalMatrix,cameraState,shipCamera,project,groundPoint,world,clamp} from './space3d.mjs';
 import {vertexShader,fragmentShader} from './shaders3d.mjs';
 import {buildScene,bloodTexture} from './scene3d.mjs';
+import {FLAGSHIP} from './battle.mjs';
 const VIEW_PITCH={rear:.32,first:-.08,overview:0};
 export class SeaRenderer {
  constructor(canvas,{reducedMotion=false}={}){
-  this.canvas=canvas;this.reducedMotion=reducedMotion;this.view='rear';this.flagship='stake';this.heading=null;this.lookYaw=0;this.pitch=VIEW_PITCH.rear;this.lastFrame=0;this.yaw=.12;this.elevation=.82;this.zoom=1;this.drag=null;this.dragged=false;this.bloodTime=-1;this.lastBattle=null;this.lost=false;
+  this.canvas=canvas;this.reducedMotion=reducedMotion;this.view='rear';this.flagship=FLAGSHIP;this.heading=null;this.lookYaw=0;this.pitch=VIEW_PITCH.rear;this.lastFrame=0;this.yaw=.12;this.elevation=.82;this.zoom=1;this.drag=null;this.dragged=false;this.bloodTime=-1;this.lastBattle=null;this.lost=false;
   this.overlay=document.querySelector('#seaLabels');this.ctx=this.overlay.getContext('2d');
   const gl=canvas.getContext('webgl',{antialias:true,alpha:false,powerPreference:'high-performance'});if(!gl)throw new Error('3D表示にはWebGLが必要です。ブラウザのグラフィックアクセラレーションを有効にして再読み込みしてください。');this.gl=gl;
   const shader=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s};
@@ -48,7 +49,7 @@ export class SeaRenderer {
   const e=b.enemy;const ep=at(e.x,e.y,240);pill(e.hp<=0?'ネフェリム撃破':e.form===2?'ネフェリム · 第二形態':'ネフェリム',ep,'#f2b0bf',13);
   if(e.rootUntil>b.time)pill(`血海拘束 ${(e.rootUntil-b.time).toFixed(1)}s`,at(e.x,e.y,212),'#f3a4cd',11);
   if(e.attack)pill(`${e.attack.type==='slam'?'血潮の墜落':'薙ぎ払い'} ${(e.attack.duration-e.attack.age).toFixed(1)}s`,e.attack.type==='slam'?at(e.attack.x,e.attack.y+e.attack.range,10):at(e.x-100,e.y,10),'#ffb2bd',12);
-  if(b.joust){const s=b.ship('lance');pill(`JOUST · ${Math.round(b.joust.speed)}`,at(s.x,s.y,142),'#ffe0a0',12);}
+  if(b.joust){const s=b.ship('lance');pill(`ジョスト · 速度${Math.round(b.joust.speed)}`,at(s.x,s.y,142),'#ffe0a0',12);}
   for(const f of b.effects.filter(f=>f.type==='label')){c.globalAlpha=Math.min(1,(1-f.age/f.life)*2);pill(f.text,at(f.x,f.y,70+f.age*24),f.color,13);}c.globalAlpha=1;
   const rally=b.pending==='rally'?b.pendingRally:b.order==='rally'?b.rally:null;if(rally)pill('集合地点',at(rally.x,rally.y,15),'#f4dc9b',11);
   const entry=b.joust?.entry||b.entry;if(entry&&(b.joust||b.pendingSkills.includes('lance')))pill('助走点',at(entry.x,entry.y,15),'#f4dc9b',11);

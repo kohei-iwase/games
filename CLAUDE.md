@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ゲーム制作用のリポジトリ。現在の作品は `kaijo-minnezang/`（海城のミンネザング、3D戦術海戦の試作）のみ。詳細は各ディレクトリの README を参照。ルートの `.gitignore` はUnity用テンプレートだが、現行プロジェクトはUnityではなく素のWebGL + ES Modules。
 
-ドキュメントやゲーム内テキストは日本語で書かれている。
+このリポジトリは原則日本語で表示する。ゲーム内の表示テキスト（ラベル・見出し・ボタン等）、ドキュメント、コミットメッセージ、PRの説明は日本語で書く。キー名（Space, F, Q/W/E）など、英字のほうが自然なものは例外。
 
 ## ブランチ運用
 
@@ -60,10 +60,11 @@ node tests/geometry3d.mjs   # カメラ・座標の往復変換、メッシュ�
 
 ### アーキテクチャ
 
-依存方向は `app.mjs` → `battle.mjs` / `campaign.mjs` / `render3d.mjs` → `scene3d.mjs` / `shaders3d.mjs` / `space3d.mjs`。
+依存方向は `app.mjs` → `battle.mjs` / `campaign.mjs` / `config.mjs` / `render3d.mjs` → `scene3d.mjs` / `shaders3d.mjs` / `space3d.mjs`。
 
 - `battle.mjs`：DOM非依存の戦闘シミュレーション（`Battle` クラス、`ORDERS`、`SKILLS`、`DIFFICULTY`）。Nodeテストはこのモジュールを直接動かす。戦場は2D論理座標（`WIDTH=1000, HEIGHT=650`）で、血域の濃度、蓄血、イベントポーズ、スキル予約、拘束、ジョスト、勝敗はすべてここに置く。
 - `campaign.mjs`：プロローグ、戦闘結果に応じたエピローグと助言、`localStorage` への記録保存。
+- `config.mjs`：視点・自動ポーズ（`pauseMode`：`events`／`none`）・ジョスト入力補助・カットイン短縮の設定を `localStorage` に保存し、`applyConfig` で `Battle` に反映する。`Battle.autoPause` が false のとき `queuePause` はポーズせず `notice` に通知を残す（手動の `pause()` は常に有効）。旗艦は `battle.mjs` の `FLAGSHIP`（白鷺卿）。
 - `space3d.mjs`：行列演算、カメラ（`cameraState`）、論理座標から3Dへの変換（`world(x,y,h)` は `[x-500, h, y-325]`）、画面座標から海面へのレイ交差（`groundPoint`）、手続き生成メッシュ（`meshes`）。
 - `scene3d.mjs`：`buildScene(battle, ...)` で Battle の状態から描画用のモデル一覧を作る純粋関数。`bloodTexture` で血域濃度をテクスチャ化する。
 - `shaders3d.mjs`：GLSL文字列（照明・海面の波・血域）。WebGL版（`render3d.mjs`）とネイティブEGL版（`native3d.py`）が同じシェーダーを使う。
