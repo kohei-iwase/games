@@ -10,7 +10,7 @@ let story='prologue',report=null,newBest=false,cutinKey='';
 let b=applyConfig(new Battle(),config),selected=FLAGSHIP,showRange=false,entryMode=false,last=performance.now(),acc=0,lastUI=0,lastLog=-1;
 const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
 // カットインの立ち絵。ない騎士は紋章だけを出す。
-const PORTRAITS={lance:'./art/miralka.png'};for(const src of Object.values(PORTRAITS))new Image().src=src;
+const PORTRAITS={lance:'./art/miralka.png',guard:'./art/guard-maid.png'};for(const src of Object.values(PORTRAITS))new Image().src=src;
 const descriptions={stake:'血海から杭を出現させ、10秒拘束・失血促進。移動と旋回を封じる。',lance:'助走速度で威力上昇。射出入力成功で×1.5。命中で押し戻す。',guard:'8秒間、近くの味方を防護。被害軽減・ノックバック無効。'};
 function build(){ $('#shipList').innerHTML=b.ships.map(s=>`<button class="member" data-ship="${s.id}" style="--ship-color:${s.color}"><span class="member-crest">${SKILLS[s.id].crest}</span><span class="member-body"><span class="member-name"><strong>${s.name}</strong><span id="${s.id}-hp"></span></span><span class="bar hp"><i id="${s.id}-hpbar"></i></span><span class="bar blood"><i id="${s.id}-bloodbar"></i></span><span class="member-foot"><span id="${s.id}-status"></span><span id="${s.id}-blood"></span></span></span></button>`).join('');
  $('#skillDock').innerHTML=b.ships.map((s,i)=>`<button class="skill-button" data-skill="${s.id}" style="--ship-color:${s.color}" title="${s.name}〈${SKILLS[s.id].name}〉${descriptions[s.id]}"><span class="skill-ring"></span><span class="skill-crest">${SKILLS[s.id].crest}</span><span class="key">${['Q','W','E'][i]}</span><span class="skill-name">${SKILLS[s.id].name}</span><span class="skill-state" id="${s.id}-skillstate"></span></button>`).join('');
