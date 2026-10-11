@@ -19,10 +19,10 @@ export function buildScene(b,selected='lance',showRange=false){
  const entry=b.joust?.entry||b.entry;
  if(entry&&(b.joust||b.pendingSkills.includes('lance'))){ring(entry.x,entry.y,20,[.98,.8,.4,1]);const a=world(entry.x,entry.y,5),z=world(b.enemy.x,b.enemy.y,5);for(let i=0;i<24;i+=2)line(a.map((v,k)=>v+(z[k]-v)*i/24),a.map((v,k)=>v+(z[k]-v)*(i+1)/24),1.3,[.98,.8,.4,.8]);}
  for(const s of b.ships){
-  const color=s.id==='stake'?C.teal:s.id==='lance'?[.85,.87,.90,1]:C.blue,trim=s.id==='lance'?[.80,.82,.88,1]:C.gold;
+  const color=s.id==='stake'?[.78,.47,.25,1]:s.id==='lance'?[.85,.87,.90,1]:C.blue,trim=s.id==='lance'?[.80,.82,.88,1]:s.id==='stake'?[.80,.47,.26,1]:C.gold;
   const dead=s.hp<=0,flash=s.hitUntil>b.time;
   const g=model(world(s.x,s.y,dead?-26:7+Math.sin(b.time*1.7+s.x)*1.1),[1,1,1],s.angle);
-  const stone=flash?[.93,.73,.74,1]:C.stone,body=s.id==='guard'?[.18,.23,.34,1]:s.id==='lance'?[.40,.04,.11,1]:[.17,.24,.27,1];
+  const stone=flash?[.93,.73,.74,1]:C.stone,body=s.id==='guard'?[.18,.23,.34,1]:s.id==='lance'?[.40,.04,.11,1]:[.29,.14,.08,1];
   item('disc',world(s.x,s.y,2.2),[62,1,37],[.005,.018,.025,.24],s.angle);
   local(g,'hull',[0,6,0],[s.id==='guard'?103:118,19,s.id==='guard'?76:58],body);
   local(g,'hull',[0,16,0],[s.id==='guard'?100:114,3,s.id==='guard'?72:54],trim);
