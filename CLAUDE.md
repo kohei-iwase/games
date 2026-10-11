@@ -4,9 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## リポジトリ概要
 
-ゲーム制作用のリポジトリ。現在のプロジェクトは `kaijo-minnezang/`（海城のミンネザング、3D戦術海戦の試作 v0.4）のみ。ルートの `.gitignore` はUnity用テンプレートだが、現行プロジェクトはUnityではなく素のWebGL + ES Modules。
+ゲーム制作用のリポジトリ。現在の作品は `kaijo-minnezang/`（海城のミンネザング、3D戦術海戦の試作）のみ。詳細は各ディレクトリの README を参照。ルートの `.gitignore` はUnity用テンプレートだが、現行プロジェクトはUnityではなく素のWebGL + ES Modules。
 
 ドキュメントやゲーム内テキストは日本語で書かれている。
+
+## ブランチ運用
+
+- 作業ブランチ → `develop` へのマージは、テストが通っていれば確認なしで行ってよい。
+- `main` へのマージ・プッシュはユーザーが手動で行う。Claude は `main` にプッシュ・マージしない（PRを作る場合も、マージはしない）。
+
+## モデルの使い分け
+
+メインの会話は Opus で、相談・設計判断・全体の進行を担当する。作業は次のサブエージェントに任せる。
+
+| 用途 | サブエージェント | モデル |
+|---|---|---|
+| ファイル・仕様・用法の検索、調査 | `searcher` | Haiku |
+| 方針が決まった実装、テストの追加と実行 | `implementer` | Sonnet |
+| 設計・バランス・仕様の深い検討（セカンドオピニオン） | `advisor` | Opus |
+| OpenAI Codex による実装（ユーザーが指定したとき、別モデルの案を比べたいとき） | `codex` | Codex CLI（操作役は Sonnet） |
+
+- 複数ファイルにまたがる調査は、自分で読み回らず `searcher` に任せる。
+- 実装は、変更箇所と仕様を明確にしてから `implementer` に渡す。返ってきた差分とテスト結果は自分で確認してからコミットする。
+- `codex` には、ユーザーが Codex・GPT 系モデルを指定したときだけ任せる。既定の実装担当は `implementer`。`codex` を使うには、環境に `OPENAI_API_KEY` を登録し、`api.openai.com` への通信を許可しておく必要がある。モデルは環境変数 `CODEX_MODEL` で指定できる。
+- 1〜2行の修正や、すでに開いているファイルの小さな変更は、委任せずに直接行ってよい。
+- ユーザーとの相談、仕様の決定、コミット・プッシュはメインの会話で行う。
 
 ## kaijo-minnezang
 
@@ -19,7 +41,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python3 -m http.server 8000 --directory kaijo-minnezang/dist
 
 # テスト（kaijo-minnezang/ で実行。各ファイルが単体のテストスクリプトで、assert失敗で非ゼロ終了）
-node tests/combat.mjs       # 戦闘ルール（Battle）
+cd kaijo-minnezang
+node tests/combat.mjs       # 戦闘ルール（Battle）、難易度、戦果報告
+node tests/campaign.mjs     # エピローグ・助言・記録保存（localStorageはテスト内でモック）
 node tests/geometry3d.mjs   # カメラ・座標の往復変換、メッシュの有限値。/tmp/minnezang-3d-scene.json を出力
 ```
 
@@ -30,9 +54,10 @@ node tests/geometry3d.mjs   # カメラ・座標の往復変換、メッシュ�
 
 ### アーキテクチャ
 
-依存方向は `app.mjs` → `battle.mjs` / `render3d.mjs` → `scene3d.mjs` / `shaders3d.mjs` / `space3d.mjs`。
+依存方向は `app.mjs` → `battle.mjs` / `campaign.mjs` / `render3d.mjs` → `scene3d.mjs` / `shaders3d.mjs` / `space3d.mjs`。
 
-- `battle.mjs`：DOM非依存の戦闘シミュレーション（`Battle` クラス、`ORDERS`、`SKILLS`）。Nodeテストはこのモジュールを直接動かす。戦場は2D論理座標（`WIDTH=1000, HEIGHT=650`）で、血域の濃度、蓄血、イベントポーズ、スキル予約、拘束、ジョスト、勝敗はすべてここに置く。
+- `battle.mjs`：DOM非依存の戦闘シミュレーション（`Battle` クラス、`ORDERS`、`SKILLS`、`DIFFICULTY`）。Nodeテストはこのモジュールを直接動かす。戦場は2D論理座標（`WIDTH=1000, HEIGHT=650`）で、血域の濃度、蓄血、イベントポーズ、スキル予約、拘束、ジョスト、勝敗はすべてここに置く。
+- `campaign.mjs`：プロローグ、戦闘結果に応じたエピローグと助言、`localStorage` への記録保存。
 - `space3d.mjs`：行列演算、カメラ（`cameraState`）、論理座標から3Dへの変換（`world(x,y,h)` は `[x-500, h, y-325]`）、画面座標から海面へのレイ交差（`groundPoint`）、手続き生成メッシュ（`meshes`）。
 - `scene3d.mjs`：`buildScene(battle, ...)` で Battle の状態から描画用のモデル一覧を作る純粋関数。`bloodTexture` で血域濃度をテクスチャ化する。
 - `shaders3d.mjs`：GLSL文字列（照明・海面の波・血域）。WebGL版（`render3d.mjs`）とネイティブEGL版（`native3d.py`）が同じシェーダーを使う。
