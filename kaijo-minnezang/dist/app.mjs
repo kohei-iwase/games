@@ -3,6 +3,8 @@ import {PROLOGUE,epilogue,hints,loadRecords,saveRecord,difficultyName} from './c
 import {SeaRenderer} from './render3d.mjs';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let renderer=null;try{renderer=new SeaRenderer($('#sea'),{reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});}catch(error){$('#renderError').hidden=false;$('#renderError').textContent=error.message;}
+const VIEW_KEY='minnezang-view';let savedView='rear';try{savedView=localStorage.getItem(VIEW_KEY)||'rear'}catch{}
+if(renderer){renderer.setView(savedView);$('#viewMode').value=renderer.view}
 let story='prologue',report=null,newBest=false,cutinKey='';
 let b=new Battle({difficulty:$('#difficulty').value}),selected='stake',showRange=false,entryMode=false,last=performance.now(),acc=0,lastUI=0,lastLog=-1;
 const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
@@ -36,7 +38,7 @@ function ui(){storyUI();const plan=b.canPlan();$('#clock').textContent=clock(b.t
 }
 $('#playBtn').onclick=play;$('#storyGo').onclick=()=>{if(story==='result')reset();else story=null;ui()};$('#storyClose').onclick=()=>{story=null;ui()};$('#difficulty').onchange=()=>{if(b.mode==='ready'||b.mode==='ended'){const keep=story==='prologue';reset();if(keep)story='prologue'}recordUI();ui()};$('#resetBtn').onclick=reset;$('#entryBtn').onclick=()=>{entryMode=!entryMode;ui()};$('#rangeBtn').onclick=()=>{showRange=!showRange;$('#rangeBtn').classList.toggle('active',showRange)};$('#helpBtn').onclick=()=>{if(b.mode==='running')b.pause();$('#help').open=!$('#help').open;ui()};$('#helpClose').onclick=()=>{$('#help').open=false;ui()};$('#skipCutin').onclick=()=>{b.finishCutins();ui()};$('#autoTiming').onchange=e=>b.autoTiming=e.target.checked;$('#shortCutin').onchange=e=>b.shortCutin=e.target.checked;$('#timingBtn').onclick=()=>{b.pressTiming();ui()};
 $$('.order-option').forEach(el=>el.onclick=()=>{entryMode=false;b.setOrder(el.dataset.order);ui()});$('#sea').addEventListener('click',ev=>{if(!renderer||renderer.lost)return;const p=renderer.point(ev);if(!p)return;if(entryMode){if(b.setEntry(p.x,p.y))entryMode=false;}else if(b.pending==='rally')b.setRally(p.x,p.y);else{const s=renderer.pickShip(ev,b)||b.ships.find(s=>distance(s,p)<50);if(s)selected=s.id}ui()});
-$('#zoomIn').onclick=()=>renderer?.zoomBy(.85);$('#zoomOut').onclick=()=>renderer?.zoomBy(1.17);$('#cameraReset').onclick=()=>renderer?.resetCamera();
+$('#viewMode').onchange=e=>{renderer?.setView(e.target.value);try{localStorage.setItem(VIEW_KEY,e.target.value)}catch{}};$('#zoomIn').onclick=()=>renderer?.zoomBy(.85);$('#zoomOut').onclick=()=>renderer?.zoomBy(1.17);$('#cameraReset').onclick=()=>renderer?.resetCamera();
 $('#sea').addEventListener('renderlost',()=>{if(b.mode==='cutin')b.finishCutins();b.pause('3D表示が停止しました','ページを再読み込みしてください。');$('#renderError').hidden=false;$('#renderError').textContent='3D描画が中断されました。ページを再読み込みしてください。';ui()});
 
 document.addEventListener('keydown',ev=>{if(['INPUT','SELECT','TEXTAREA'].includes(ev.target.tagName)||ev.repeat)return;const key=ev.key.toLowerCase();if(story==='result'&&ev.code==='Space'&&ev.target.tagName!=='BUTTON'){ev.preventDefault();reset();ui();return}if(key==='f'){ev.preventDefault();b.pressTiming();ui();return}if(ev.code==='Space'&&ev.target.tagName!=='BUTTON'){ev.preventDefault();play()}if('123'.includes(key)&&key){b.setOrder({1:'charge',2:'rally',3:'hold'}[key]);entryMode=false;}if(['q','w','e'].includes(key))b.toggleSkill({q:'stake',w:'lance',e:'guard'}[key]);ui()});
