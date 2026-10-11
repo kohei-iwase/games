@@ -24,10 +24,10 @@ export class Battle{
   this.time=0;this.mode='ready';this.order='balanced';this.pending=null;this.formation=FORMATIONS[options.formation]?options.formation:'free';this.pendingFormation=null;this.rally=null;this.pendingRally=null;this.pendingSkills=[];this.entry=null;this.cutin=null;this.joust=null;this.timing=null;this.autoTiming=false;this.shortCutin=false;this.auto=!!options.auto;this.autoPause=options.autoPause??!this.auto;this.joustPolicy=options.joustPolicy||'manual';this.duration=options.duration??(this.auto?30:0);this.islandOn=options.island!==false;this.skillOrder=options.skillOrder||[];this.autoUsed=new Set();this.judge=null;this.decided=null;this.notice=null;
   this.seq=0;this.logs=[];this.effects=[];this.shots=[];this.pools=[];this.pauseRequests=[];this.result=null;this.totalBlood=0;this.guardUntil=0;this.bloodNotified=false;this.island={hp:100};this.islandHalf=false;this.siegeNoted=false;this.shoalNoted=false;this.lost=null;this.combo=false;this.lastTiming='';
   this.reason='三騎士、出撃準備';this.detail='戦闘開始 → 杭で血域を作る → スキルを予約。定期ポーズはありません。';
-  this.enemy={x:745,y:270,hp:Math.max(1,Math.min(Math.round(1000*d.enemyHp),Math.round(options.enemyHp??1e9))),maxHp:Math.round(1000*d.enemyHp),form:1,bleed:0,bleedUntil:0,dotClock:0,hitUntil:0,attack:null,nextAttack:4,recoveryUntil:0,rootUntil:0,pierced:false,angle:2.65,attackCount:0};
+  const maxHp=options.enemyMaxHp>0?Math.round(options.enemyMaxHp):Math.round(1000*d.enemyHp);this.enemy={x:745,y:270,hp:Math.max(1,Math.min(maxHp,Math.round(options.enemyHp??1e9))),maxHp,form:1,bleed:0,bleedUntil:0,dotClock:0,hitUntil:0,attack:null,nextAttack:4,recoveryUntil:0,rootUntil:0,pierced:false,angle:2.65,attackCount:0};
   this.ships=this.makeFleet(options.fleet).map(s=>({...s,hp:s.maxHp,angle:-.3,hitUntil:0,critical:false,sunk:false,windup:null,lunge:null,holdPoint:null,waypoint:null,pendingWaypoint:null,cooldown:1,skillCd:0,blood:0,speedNow:0,status:'出撃待機'}));
-  this.enemyStart=this.enemy.hp;this.flagship=(this.ship('lance')||this.ships.find(s=>s.kind!=='escort')||this.ships[0]).id;
-  this.log('血海で蓄血し、三騎士の技を重ねよ。');
+  if(this.enemy.hp<=maxHp*.5)this.enemy.form=2;this.enemyStart=this.enemy.hp;this.flagship=(this.ship('lance')||this.ships.find(s=>s.kind!=='escort')||this.ships[0]).id;
+  this.log(this.auto?'交戦開始。':'血海で蓄血し、三騎士の技を重ねよ。');
  }
  ship(id){return this.ships.find(s=>s.id===id)}
  flag(){return this.ship(this.flagship)}
@@ -98,7 +98,7 @@ export class Battle{
  this.flushPause();
  }
  report(){const ratio=this.ships.reduce((n,s)=>n+Math.max(0,s.hp)/s.maxHp,0)/this.ships.length,st=this.stats;let score=0,rank='—';if(this.result==='victory'){score=Math.round(40+ratio*30+this.island.hp/100*5+Math.min(15,st.combos*5)+Math.min(9,st.perfect*3)+clamp((240-this.time)/150,0,1)*6+this.tuning.bonus);rank=score>=85?'S':score>=72?'A':score>=58?'B':'C'}
-  const rt=this.ratios();return {result:this.result,decided:this.decided,judge:rt,dealtTotal:Math.max(0,Math.round(this.enemyStart-this.enemy.hp)),difficulty:this.difficulty,time:Math.round(this.time),rank,score,form:this.enemy.form,enemyHp:Math.ceil(this.enemy.hp),ships:this.ships.map(s=>({id:s.id,name:s.name,hp:Math.ceil(s.hp),maxHp:s.maxHp,sunk:s.hp<=0,blood:Math.floor(s.blood),tier:Math.floor(s.blood/25)})),combos:st.combos,perfect:st.perfect,joustHits:st.joustHits,pauses:st.pauses,taken:Math.round(st.taken),dealt:{...st.dealt},totalBlood:Math.round(this.totalBlood),island:Math.ceil(this.island.hp),lost:this.lost}}
+  const rt=this.ratios();return {result:this.result,decided:this.decided,judge:rt,dealtTotal:Math.max(0,Math.round(this.enemyStart-this.enemy.hp)),difficulty:this.difficulty,time:Math.round(this.time),rank,score,form:this.enemy.form,enemyHp:Math.ceil(this.enemy.hp),ships:this.ships.map(s=>({id:s.id,name:s.name,hp:Math.ceil(s.hp),maxHp:s.maxHp,sunk:s.hp<=0,blood:Math.floor(s.blood),tier:Math.floor(s.blood/25)})),combos:st.combos,perfect:st.perfect,joustHits:st.joustHits,pauses:st.pauses,taken:Math.round(st.taken),dealt:{...st.dealt},totalBlood:Math.round(this.totalBlood),island:this.islandOn?Math.ceil(this.island.hp):null,lost:this.lost}}
  ratios(){const dealtRatio=clamp((this.enemyStart-this.enemy.hp)/this.enemy.maxHp,0,1),takenRatio=clamp(this.stats.taken/this.ships.reduce((n,s)=>n+s.maxHp,0),0,1);return {dealtRatio,takenRatio}}
  // 時間切れの判定：与ダメージ率が被ダメージ率以上なら勝ち。
  judgeEnd(){const r=this.judge=this.ratios(),win=r.dealtRatio>=r.takenRatio;this.log(`時間切れ。与 ${Math.round(r.dealtRatio*100)}% ／ 被 ${Math.round(r.takenRatio*100)}% で${win?'判定勝ち':'判定負け'}。`,'pause');this.finish(win,'judge')}
