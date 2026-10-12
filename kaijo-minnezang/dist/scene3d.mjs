@@ -1,5 +1,28 @@
-import {ISLAND,SHOALS} from './battle.mjs';
+import {ISLAND,SHOALS,SWARM,swarmUnit} from './battle.mjs';
 import {model,multiply,segmentMatrix,world,TAU,clamp} from './space3d.mjs';
+// 艦の見た目の位置と向き：目的地のまわりを小さく旋回する（ルールの位置 s.x,s.y は変えない）。航跡の過去の点にも同じ関数を使う。
+export function shipPose(b,s,t=b.time,x=s.x,y=s.y){const i=b.ships.indexOf(s),busy=s.hp<=0||s.windup||s.lunge||(b.joust&&s.id==='lance'),r=busy?0:s.id===b.flagship?6:15+i*3,a=t*(.55+.07*i)+i*1.9;return {x:x+Math.cos(a)*r,y:y+Math.sin(a)*r*.8,angle:(s.vang??s.angle)+(busy?0:Math.sin(a)*.12)}}
+// 小さな海の怪物（眷属）。kind=serpent（海蛇）／crab（甲殻の獣）／fish（触手のある魚）。g=個体の行列。draw/local/limb は呼び出し側のシーンのもの。
+const MON={serpent:[.26,.11,.31,1],crab:[.45,.13,.17,1],fish:[.30,.12,.27,1]},EYE=[1,.62,.28,1];
+export function monster(kind,t,{draw,local,limb},g,flash=false,len=9){
+ const c=flash?[.78,.40,.50,1]:MON[kind],dk=c.map((v,i)=>i<3?v*.55:1),sp=(a,z,r)=>draw('cone',multiply(g,segmentMatrix(a,z,r)),dk),eye=(p,r=3)=>local(g,'sphere',p,[r,r,r],EYE,0,1.6);
+ if(kind==='serpent'){
+  for(let j=0;j<len;j++){const x=-j*10,z=Math.sin(t*4-j*.8)*8*(.4+j*.08),y=5+Math.max(0,Math.sin(t*3-j*.9))*7,r=j?9-j*.5:11;local(g,'sphere',[x,y,z],[r*1.15,r*.85,r],j%2?dk:c);if(j%2===0&&j>0)sp([x,y+r*.6,z],[x-3,y+r*.6+10,z],3.5)}
+  const hz=Math.sin(t*4)*3.2,hy=5+Math.max(0,Math.sin(t*3))*7;local(g,'sphere',[10,hy,hz],[10,6,7],c);sp([4,hy+5,hz+4],[-6,hy+16,hz+8],2.6);sp([4,hy+5,hz-4],[-6,hy+16,hz-8],2.6);eye([13,hy+3,hz+4],2.4);eye([13,hy+3,hz-4],2.4);
+ }else if(kind==='crab'){
+  local(g,'sphere',[0,9,0],[24,10,19],c);local(g,'sphere',[2,13,0],[15,6,12],dk);
+  for(const s of [-1,1]){
+   const open=Math.abs(Math.sin(t*3+s))*.6,sh=[11,9,s*13],el=[25,12,s*22],hand=[34,12,s*18];limb(g,sh,el,3.2,c);limb(g,el,hand,3.2,c);local(g,'sphere',hand,[9,6,7],c);
+   sp([hand[0]+2,hand[1],hand[2]+3+open*8],[hand[0]+17,hand[1],hand[2]+1+open*3],3.2);sp([hand[0]+2,hand[1],hand[2]-3-open*8],[hand[0]+17,hand[1],hand[2]-1-open*3],3.2);
+   for(let k=0;k<3;k++)limb(g,[-8+k*9,8,s*13],[-12+k*10+Math.sin(t*5+k*2+s)*3,1,s*29],1.8,dk);
+   limb(g,[16,13,s*6],[19,19,s*6],1.1,dk);eye([19,20,s*6],2.3);
+  }
+ }else{
+  local(g,'sphere',[0,9,0],[30,13,13],c);local(g,'sphere',[14,9,0],[14,12,12],c);sp([-12,9,0],[-38,9,Math.sin(t*6)*8],7);sp([0,16,0],[-8,30,0],5);
+  for(const s of [-1,1])eye([20,12,s*7],3.4);
+  for(let k=0;k<4;k++){const z=(k-1.5)*5,p0=[20,6,z],p1=[30,4+Math.sin(t*4+k)*3,z*1.7+Math.sin(t*4+k*1.3)*5],p2=[40,3,z*2.4+Math.sin(t*4+k*1.3+1)*7];limb(g,p0,p1,1.6,dk);limb(g,p1,p2,1.1,dk)}
+ }
+}
 const C={stone:[.40,.47,.51,1],dark:[.07,.12,.17,1],gold:[.70,.52,.25,1],bone:[.70,.72,.62,1],teal:[.28,.68,.64,1],blue:[.30,.48,.76,1],blood:[.64,.075,.23,1]};
 export function buildScene(b,selected='lance',showRange=false){
  const solid=[],transparent=[];
@@ -27,9 +50,9 @@ export function buildScene(b,selected='lance',showRange=false){
  for(const s of b.ships){
   const esc=s.kind==='escort',ec=esc?[...hex(s.color),1]:null,color=ec||(s.id==='stake'?[.78,.47,.25,1]:s.id==='lance'?[.85,.87,.90,1]:C.blue),trim=ec||(s.id==='lance'?[.80,.82,.88,1]:s.id==='stake'?[.80,.47,.26,1]:C.gold);
   const dead=s.hp<=0,flash=s.hitUntil>b.time;
-  const g=model(world(s.x,s.y,dead?-26:7+Math.sin(b.time*1.7+s.x)*1.1),esc?[.75,.75,.75]:[1,1,1],s.angle);
+  const pose=shipPose(b,s),g=model(world(pose.x,pose.y,dead?-26:7+Math.sin(b.time*1.7+s.x)*1.1),esc?[.75,.75,.75]:[1,1,1],pose.angle);
   const stone=flash?[.93,.73,.74,1]:C.stone,body=esc?[ec[0]*.45,ec[1]*.42,ec[2]*.4,1]:s.id==='guard'?[.18,.23,.34,1]:s.id==='lance'?[.40,.04,.11,1]:[.29,.14,.08,1];
-  item('disc',world(s.x,s.y,2.2),[62,1,37],[.005,.018,.025,.24],s.angle);
+  item('disc',world(pose.x,pose.y,2.2),[62,1,37],[.005,.018,.025,.24],pose.angle);
   local(g,'hull',[0,6,0],[s.id==='guard'?103:118,19,s.id==='guard'?76:58],body);
   local(g,'hull',[0,16,0],[s.id==='guard'?100:114,3,s.id==='guard'?72:54],trim);
   local(g,'box',[-13,27,0],[48,20,35],stone);
@@ -61,8 +84,11 @@ export function buildScene(b,selected='lance',showRange=false){
    for(const z of [-36,36])local(g,'box',[-5,20,z],[80,14,7],C.blue);
   }
   if(!dead){
-   if(s.id===selected)ring(s.x,s.y,62,[...color.slice(0,3),.85],3.7);
-   if(s.blood>=25)ring(s.x,s.y,67,[.90,.20,.40,.5],4.1);
+   // 航跡：過去の位置に広がりながら薄れる白い泡。艦首にも白波。
+   for(const q of s.trail||[]){const age=b.time-q.t;if(age<0||age>2.8)continue;const o=shipPose(b,s,q.t,q.x,q.y),f=age/2.8,w=(10+f*24)*(esc?.75:1);item('disc',world(o.x,o.y,2.7),[w,1,w*.8],[.9,.96,.97,.3*(1-f)],o.angle,.2)}
+   item('disc',world(pose.x+Math.cos(pose.angle)*40,pose.y+Math.sin(pose.angle)*40,2.8),[(esc?14:20)+Math.min(10,s.speedNow*.1),1,(esc?9:12)],[.95,.98,.98,.5],pose.angle,.25);
+   if(s.id===selected)ring(pose.x,pose.y,62,[...color.slice(0,3),.85],3.7);
+   if(s.blood>=25)ring(pose.x,pose.y,67,[.90,.20,.40,.5],4.1);
    if(showRange&&s.id===selected)ring(s.x,s.y,s.id==='guard'?235:s.range,[...color.slice(0,3),.42],3.1);
    if(s.speedNow>5)for(let i=0;i<3;i++)local(g,'ring',[-60-i*18,0,0],[20+i*6,1,15+i*3],[.59,.80,.81,.15]);
    if(s.windup)ring(s.x,s.y,54,[1,.78,.3,.7]);
@@ -71,9 +97,12 @@ export function buildScene(b,selected='lance',showRange=false){
  const e=b.enemy,flash=e.hitUntil>b.time,dead=e.hp<=0;
  const root=e.rootUntil>b.time;
  const kin=b.enemyKind==='kin',k=kin?.55:1;
- const group=model(world(e.x,e.y,dead?-95*k:0),[k,k,k],e.angle);
+ const now=b.time+b.after,group=model(world(e.x,e.y,dead?-95*k*clamp(b.after/1.4,0,1):0),[k,k,k],e.angle);
  const hide=flash?[.73,.40,.46,1]:kin?[.12,.19,.24,1]:e.form===2?[.32,.13,.25,1]:[.18,.27,.34,1];
- item('disc',world(e.x,e.y,2.4),[104*k,1,88*k],[.005,.015,.03,.32]);
+ if(!kin)item('disc',world(e.x,e.y,2.4),[104*k,1,88*k],[.005,.015,.03,.32]);
+ // 眷属の群れ：小さな怪物が群れの中心のまわりを泳ぐ。体力が減ると1体ずつ沈む。
+ if(kin)for(let i=0;i<SWARM;i++){const u=swarmUnit(b,i,now);if(u.sink>=1)continue;const gm=model(world(u.x,u.y,u.h-u.sink*50),[1.4,1.4,1.4],u.angle);item('disc',world(u.x,u.y,2.4),[44,1,28],[.005,.015,.03,.3*(1-u.sink)],u.angle);monster(u.kind,now*1.2+i*1.7,{draw,local,limb},gm,flash,i===3?7:9)}
+ if(!kin){
  // Massive plated shoulders and horned head rise out of the water.
  local(group,'sphere',[-10,38,0],[65,68,57],hide);
  local(group,'sphere',[0,98,0],[45,61,64],hide);
@@ -92,6 +121,7 @@ export function buildScene(b,selected='lance',showRange=false){
   local(group,'sphere',shoulder,[32,36,32],hide);limb(group,shoulder,elbow,22,hide);local(group,'sphere',elbow,[23,23,23],hide);limb(group,elbow,hand,16,hide);local(group,'sphere',hand,[22,13,22],hide);
   for(let i=-1;i<=1;i++){const start=[hand[0]+9,hand[1]+3,hand[2]+i*11],end=[hand[0]+38,Math.max(4,hand[1]-14),hand[2]+i*16];draw('cone',multiply(group,segmentMatrix(start,end,5)),C.bone);}
  }
+ }
  if(root){for(let i=0;i<8;i++){const a=i*TAU/8,x=e.x+Math.cos(a)*92,y=e.y+Math.sin(a)*78;const rise=Math.min(1,(10-(e.rootUntil-b.time))*3+.1);item('cone',world(x,y,56*rise),[9,118*rise,9],[.31,.035,.15,1],0,.1);item('cone',world(x,y,58*rise),[4,128*rise,4],[.92,.28,.52,1],0,.5);line(world(x,y,45*rise),world(e.x,e.y,32),1.1,[.84,.26,.49,.6]);}}
  // Telegraphs: dashed outline, a fill that grows toward the strike moment, and fixed cracks seeded by the attack.
  const dashed=(x0,y0,x1,y1,n,col)=>{for(let k=0;k<n;k+=2){const t0=k/n,t1=(k+1)/n;line(world(x0+(x1-x0)*t0,y0+(y1-y0)*t0,5.2),world(x0+(x1-x0)*t1,y0+(y1-y0)*t1,5.2),2.1,col,.6)}};
@@ -99,8 +129,13 @@ export function buildScene(b,selected='lance',showRange=false){
  if(e.attack?.type==='slam'){const a=e.attack,p=a.age/a.duration,edge=[1,.36,.42,1];item('disc',world(a.x,a.y,4.3),[a.range,1,a.range],[.82,.03,.1,.34+p*.15],0,.5);item('disc',world(a.x,a.y,4.6),[Math.max(4,a.range*p),1,Math.max(4,a.range*p)],[1,.12,.18,.4],0,.7);for(let k=0;k<48;k+=2){const t0=k/48*TAU,t1=(k+1)/48*TAU;line(world(a.x+Math.cos(t0)*a.range,a.y+Math.sin(t0)*a.range,5.2),world(a.x+Math.cos(t1)*a.range,a.y+Math.sin(t1)*a.range,5.2),2.1,edge,.6)}cracks({...a,angle:0},0,TAU,7,p);item('sphere',world(a.x,a.y,40+(1-p)*160),[20,30,20],[.85,.2,.4,1],0,.6);line(world(e.x,e.y,90),world(a.x,a.y,40+(1-p)*160),2.4,[.84,.26,.49,.7],.5);}
  else if(e.attack){const a=e.attack,p=a.age/a.duration,edge=[1,.36,.42,1];item('sector',world(a.x,a.y,4.3),[a.range,1,a.range],[.82,.03,.1,.42+p*.15],a.angle,.5);item('sector',world(a.x,a.y,4.6),[Math.max(4,a.range*p),1,Math.max(4,a.range*p)],[1,.12,.18,.42],a.angle,.7);for(const angle of [a.angle-a.arc,a.angle+a.arc])dashed(a.x,a.y,a.x+Math.cos(angle)*a.range,a.y+Math.sin(angle)*a.range,13,edge);for(let i=0;i<40;i+=2){const t=a.angle-a.arc+i*a.arc*2/40,t2=t+a.arc*2/40;line(world(a.x+Math.cos(t)*a.range,a.y+Math.sin(t)*a.range,5.2),world(a.x+Math.cos(t2)*a.range,a.y+Math.sin(t2)*a.range,5.2),2.1,edge,.6);}cracks(a,a.angle-a.arc,a.angle+a.arc,5,p);}
  const guard=b.ship('guard');if(guard&&guard.hp>0&&b.time<b.guardUntil){ring(guard.x,guard.y,235,[.42,.70,1,.8],5);item('disc',world(guard.x,guard.y,3.3),[235,1,235],[.25,.50,.9,.09],0,.3);for(const s of b.ships.filter(s=>b.protected(s)))ring(s.x,s.y,56,[.59,.83,1,.85],7);}
- for(const p of b.shots){const t=clamp(p.age/p.duration,0,1),x=p.from.x+(p.to.x-p.from.x)*t,y=p.from.y+(p.to.y-p.from.y)*t,a=Math.atan2(p.to.y-p.from.y,p.to.x-p.from.x);line(world(x-Math.cos(a)*34,y-Math.sin(a)*34,27),world(x,y,27),2,[.73,.96,.88,1],.5);line(world(x-Math.cos(a)*70,y-Math.sin(a)*70,27),world(x,y,27),1,[.35,.94,.8,.35],.7);}
- for(const f of b.effects){const p=f.age/f.life;if(f.type==='impact'){for(let i=0;i<8;i++){const a=i*TAU/8,r=(f.size||50)*p;line(world(f.x+Math.cos(a)*r*.5,f.y+Math.sin(a)*r*.5,15+20*p),world(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,20+35*p),1.8,[1,.65,.35,1-p],1);}ring(f.x,f.y,8+p*(f.size||50),[1,.67,.45,1-p],9);}else if(f.type==='shield')ring(f.x,f.y,48+p*30,[.5,.8,1,1-p],20);else if(f.type==='sweep'){const a=f.angle-f.arc+2*f.arc*p;line(world(f.x,f.y,16),world(f.x+Math.cos(a)*f.range,f.y+Math.sin(a)*f.range,16),4,[1,.60,.60,1-p],1);}else if(f.type==='slam'){ring(f.x,f.y,f.radius*(.6+p*.7),[1,.45,.55,1-p],8);item('disc',world(f.x,f.y,4.6),[f.radius*(1+p*.3),1,f.radius*(1+p*.3)],[.9,.15,.3,(1-p)*.45],0,.8);}else if(f.type==='tentacle'){line(world(e.x,e.y,65),world(f.x,f.y,16),2,[.8,.25,.50,1-p],.6);}}
+ // 弾：随伴艦は砲弾（放物線と煙の尾）、カナン卿は杭（細い光の線）。発砲の閃光と着弾の水柱は effects の muzzle／splash。
+ for(const p of b.shots)(p.shells||[]).forEach(sh=>{
+  const t=(p.age-sh.delay)/p.duration;if(t<0||t>=1)return;const stake=p.kind==='stake',ex=p.to.x+sh.m.dx,ey=p.to.y+sh.m.dy,pos=u=>{const q=clamp(u,0,1);return world(sh.o.x+(ex-sh.o.x)*q,sh.o.y+(ey-sh.o.y)*q,30+((sh.hit?26:0)-30)*q+(stake?8:58)*Math.sin(Math.PI*q))};
+  if(stake){line(pos(t-.12),pos(t),2,[.73,.96,.88,1],.5);line(pos(t-.3),pos(t),1,[.35,.94,.8,.35],.7)}
+  else{item('sphere',pos(t),[3.6,3.6,3.6],[1,.88,.55,1],0,1.6);line(pos(t-.1),pos(t),1.6,[1,.9,.6,.8],1);for(let j=1;j<=4;j++){const r=2.6+j*1.1;item('sphere',pos(t-j*.045),[r,r,r],[.82,.82,.8,.34-j*.06])}}
+ });
+ for(const f of b.effects){if(f.age<0)continue;const p=f.age/f.life;if(f.type==='muzzle'){const ca=Math.cos(f.angle),sa=Math.sin(f.angle),r=12*(1-p)+3;item('sphere',world(f.x,f.y,30),[r,r,r],[1,.86,.5,1-p*.6],0,2);draw('cone',segmentMatrix(world(f.x,f.y,30),world(f.x+ca*30*(1-p*.5),f.y+sa*30*(1-p*.5),30),6*(1-p)+1),[1,.7,.3,.9*(1-p)],1.5);const q=5+p*10;item('sphere',world(f.x+ca*p*14,f.y+sa*p*14,32+p*18),[q,q,q],[.8,.8,.78,.4*(1-p)])}else if(f.type==='splash'){const z=f.size||1,rise=Math.sin(Math.PI*Math.min(1,p*1.15)),hg=Math.max(3,(22+60*z)*rise),r=(5+8*z)*(1+p*.8);item('sphere',world(f.x,f.y,hg*.5),[r,hg*.55,r],[.95,.99,1,.78*(1-p*.6)],0,.7);const cr=r*1.15;item('sphere',world(f.x,f.y,hg*.95),[cr,cr*.5,cr],[.97,.99,1,.8*(1-p)],0,.7);ring(f.x,f.y,10+p*46*z,[.9,.97,1,.7*(1-p)],3.2);for(let i=0;i<6;i++){const a=i*TAU/6+f.id,d=p*(24+16*z);item('sphere',world(f.x+Math.cos(a)*d,f.y+Math.sin(a)*d,4+44*z*Math.sin(Math.PI*p)),[2.4,2.4,2.4],[.95,.98,1,.8*(1-p)])}}else if(f.type==='impact'){for(let i=0;i<8;i++){const a=i*TAU/8,r=(f.size||50)*p;line(world(f.x+Math.cos(a)*r*.5,f.y+Math.sin(a)*r*.5,15+20*p),world(f.x+Math.cos(a)*r,f.y+Math.sin(a)*r,20+35*p),1.8,[1,.65,.35,1-p],1);}ring(f.x,f.y,8+p*(f.size||50),[1,.67,.45,1-p],9);}else if(f.type==='shield')ring(f.x,f.y,48+p*30,[.5,.8,1,1-p],20);else if(f.type==='sweep'){const a=f.angle-f.arc+2*f.arc*p;line(world(f.x,f.y,16),world(f.x+Math.cos(a)*f.range,f.y+Math.sin(a)*f.range,16),4,[1,.60,.60,1-p],1);}else if(f.type==='slam'){ring(f.x,f.y,f.radius*(.6+p*.7),[1,.45,.55,1-p],8);item('disc',world(f.x,f.y,4.6),[f.radius*(1+p*.3),1,f.radius*(1+p*.3)],[.9,.15,.3,(1-p)*.45],0,.8);}else if(f.type==='tentacle'){line(world(e.x,e.y,65),world(f.x,f.y,16),2,[.8,.25,.50,1-p],.6);}}
  return {solid,transparent};
 }
 export function bloodTexture(b,size=96){const pixels=new Uint8Array(size*size*4);for(let j=0;j<size;j++)for(let i=0;i<size;i++){const v=Math.round(b.concentration({x:(i+.5)/size*1000,y:(j+.5)/size*650})*255),k=(j*size+i)*4;pixels[k]=v;pixels[k+1]=0;pixels[k+2]=0;pixels[k+3]=255;}return pixels}

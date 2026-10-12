@@ -1,4 +1,4 @@
-import {Battle,FORMATIONS,SKILLS,DIFFICULTY,WIDTH,HEIGHT,FLAGSHIP,SHOALS,KNIGHTS,ESCORT,simulate} from './battle.mjs';
+import {Battle,FORMATIONS,SKILLS,DIFFICULTY,WIDTH,HEIGHT,FLAGSHIP,SHOALS,KNIGHTS,ESCORT,simulate,swarmAlive} from './battle.mjs';
 import {PROLOGUE,epilogue,loadRecords,saveRecord,difficultyName,battleVerdict,strategyReport,strategyHints} from './campaign.mjs';
 import {Strategy,MAP,LAMP,SHOALS as MAP_SHOALS,ISLETS} from './strategy.mjs';
 import {FLEET_COLOR,shipMaxHp} from './mapscene3d.mjs';
@@ -12,12 +12,12 @@ let renderer=null;try{renderer=new SeaRenderer($('#sea'),{reducedMotion:window.m
 const config=loadConfig();
 if(renderer){renderer.setView(config.view);$('#viewMode').value=renderer.view}$('#skipBattle').checked=config.skipBattle;$('#autoTiming').checked=config.autoTiming;$('#shortCutin').checked=config.shortCutin;
 const audio=createAudio();audio.setEnabled(config.sound);audio.setVolume(config.volume);$('#sound').checked=config.sound;$('#volume').value=config.volume;
-// 全体の流れ。story=エピローグのドラマ画面（プロローグ・接触・幕間の会話は talk が重ねて再生する）、phase=map（戦略マップ）／prep（出撃準備）／watch（観戦）／summary（サマリー）／result（結果）。
+// 全体の流れ。story=エピローグのドラマ画面（プロローグ・接触・幕間の会話は talk が重ねて再生する）、phase=map（戦略マップ）／prep（出撃準備）／watch（観戦。倍速つき）／result（結果）。
 // 戦略マップの進行は st（Strategy）、接触した戦闘は enc（st.encounter）と b（Battle）が持つ。
-const TICK=.025,FAST=20,SPEEDS=[1,2,4];
+const TICK=.025,SPEEDS=[1,2,4];
 let story=null,phase='map',report=null,newBest=false,cutinKey='';
 let st=new Strategy(),history=[],enc=null,fleetSel='main',mapSpeed=1,contactAt=0,finishAt=0,fleetKey='',mapLogKey=null,hintKey='',pPaused=true;
-let lastRep=null,sumLog=[],sumSeen=0,endAt=0,predTimer=0,predToken=0,predResult=null,storyKey='',judgeKey='',sumKey='';
+let lastRep=null,endAt=0,predTimer=0,predToken=0,predResult=null,storyKey='',judgeKey='',watchSpeed=1;
 const options=()=>st.battleOptions(enc);
 const newBattle=()=>{const x=applyConfig(new Battle(options()),config);if(renderer)renderer.flagship=x.flag().id;return x};
 let b=applyConfig(new Battle({island:false,auto:true}),config),selected=FLAGSHIP,last=performance.now(),acc=0,lastUI=0,lastLog=-1;
@@ -27,20 +27,21 @@ const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60
 const PORTRAITS={stake:'./art/kanaan.png',lance:'./art/miralka.png',guard:'./art/olive.png'};for(const src of Object.values(PORTRAITS))new Image().src=src;
 const crest=s=>SKILLS[s.kind]?.crest||'◈',pct=n=>Math.round(n*100)+'%';
 function build(){ $('#shipList').innerHTML=b.ships.map(s=>`<button class="member" data-ship="${s.id}" tabindex="-1" style="--ship-color:${s.color}"><span class="member-crest">${crest(s)}</span><span class="member-body"><span class="member-name"><strong>${s.name}</strong><span id="${s.id}-hp"></span></span><span class="bar hp"><i id="${s.id}-hpbar"></i></span><span class="bar blood"><i id="${s.id}-bloodbar"></i></span><span class="member-foot"><span id="${s.id}-status"></span><span id="${s.id}-blood"></span></span></span></button>`).join('')}
-// 流れの切り替え。newGame=最初から、toMap=戦略マップ（ポーズ状態）、toPrep=接触した戦闘の出撃準備、launch=出撃（観戦／サマリー／完全スキップ）、toResult=結果、backToMap=戦闘の結果を戦略へ反映、finish=戦略の決着。
+// 流れの切り替え。newGame=最初から、toMap=戦略マップ（ポーズ状態）、toPrep=接触した戦闘の出撃準備、launch=出撃（観戦／完全スキップ）、toResult=結果、backToMap=戦闘の結果を戦略へ反映、finish=戦略の決着。
 function newGame(){st=new Strategy();history=[];fleetSel='main';mapSpeed=1;report=null;toMap()}
 function toMap(){story=null;phase='map';enc=null;contactAt=0;finishAt=0;fleetKey='';mapLogKey=null;st.paused=true;$('#contact').hidden=true;ui()}
 function toPrep(){enc=st.encounter;story=null;phase='prep';report=null;$('#contact').hidden=true;b=newBattle();acc=0;lastLog=-1;build();prepUI();schedulePredict();ui();if(enc.enemyId==='nephilim'&&!st.seen.contact){st.seen.contact=true;scene('contact-nephilim',ui)}}
 // 物語の場面（story/名前.txt）を会話で再生し、終わったら done を呼ぶ。台本が読めなければそのまま done。
 function scene(name,done){talk.begin();loadScript(name).then(c=>talk.play(c,done),e=>{console.warn(e.message);talk.abort();done?.()})}
-function launch(kind){if(kind==='skip'){toResult(simulate(options(),{joustPolicy:'normal'}));return}b=newBattle();b.start();phase=kind;sumLog=[];sumSeen=0;sumKey='';judgeKey='';endAt=0;acc=0;lastLog=-1;build();ui()}
-function toSummary(){if(phase!=='watch')return;if(b.mode==='paused')b.resume();phase='summary';sumLog=[];sumSeen=0;sumKey='';ui()}
+function launch(kind){if(kind==='skip'){toResult(simulate(options(),{joustPolicy:'normal'}));return}b=newBattle();b.start();phase=kind;judgeKey='';endAt=0;acc=0;lastLog=-1;build();ui()}
 function toResult(rep){phase='result';lastRep=rep;endAt=0;resultUI();ui()}
 function backToMap(){history.push(lastRep);st.applyBattle(enc,lastRep);toMap()}
 function finish(){report=strategyReport(st,history);newBest=saveRecord(report);recordUI();$('#contact').hidden=true;story='epilogue';phase=null;ui()}
 function banner(text){$('#contactText').textContent=text;$('#contact').hidden=false;audio.sfx('bell')}
+// 観戦の倍速（×1／×2／×4）。倍速のあいだはカットインを短くする。
+function setSpeed(n){if(SPEEDS.includes(n))watchSpeed=n;b.shortCutin=config.shortCutin||watchSpeed>1;ui()}
 function togglePause(){if(phase!=='map'||st.encounter||st.result||contactAt||finishAt)return;st.paused=!st.paused;ui()}
-function play(){if(story==='prologue'||story==='epilogue'){newGame();return}if(phase==='map')togglePause();else if(phase==='prep')launch('watch');else if(phase==='result')backToMap();else if(phase==='watch'){if(b.mode==='running')b.pause();else if(b.mode==='paused')b.resume()}else if(phase==='summary'&&b.mode==='paused')b.resume();ui()}
+function play(){if(story==='prologue'||story==='epilogue'){newGame();return}if(phase==='map')togglePause();else if(phase==='prep')launch('watch');else if(phase==='result')backToMap();else if(phase==='watch'){if(b.mode==='running')b.pause();else if(b.mode==='paused')b.resume()}ui()}
 // 判定ゲージ：左が与ダメージ率、右が被ダメージ率（同じ目盛りで、半分の長さ＝50%）。与が被以上なら優勢。
 const verdictWord=(d,t)=>d>=t?(d>0?'優勢':'互角'):'劣勢';
 const gaugeHTML=(d,t,mid)=>{const w=n=>Math.min(100,n*200).toFixed(1);return `<div class="jg-side jg-d${d>=t&&d>0?' lead':''}"><b>与<span class="jg-full">ダメージ</span></b><span class="jg-bar"><i style="width:${w(d)}%"></i></span><em>${pct(d)}</em></div><div class="jg-mid">${mid}</div><div class="jg-side jg-t${d<t?' lead':''}"><em>${pct(t)}</em><span class="jg-bar"><i style="width:${w(t)}%"></i></span><b>被<span class="jg-full">ダメージ</span></b></div>`};
@@ -62,13 +63,13 @@ function resultUI(){const r=lastRep,v=battleVerdict(r),d=r.judge.dealtRatio,t=r.
  $('#resultGauge').innerHTML=gaugeHTML(d,t,`<b class="jg-time">${over?v.title:verdictWord(d,t)}</b>`);
  $('#resultStats').innerHTML=[['与ダメージ',`${r.dealtTotal}（${pct(d)}）`],['被ダメージ',`${r.taken}（${pct(t)}）`],...(hasLance()?[['会心',`${r.perfect}回`],['ジョスト命中',`${r.joustHits}回`],['連携',`${r.combos}回`]]:[]),['生還',`${r.ships.filter(s=>!s.sunk).length} / ${r.ships.length}`]].map(([k,x])=>`<div><dt>${k}</dt><dd>${x}</dd></div>`).join('');
  $('#resultEnemy').textContent=e.name;$('#resultHpBar').style.width=r.enemyHp/e.maxHp*100+'%';$('#resultHpText').textContent=`${r.enemyHp} / ${e.maxHp}`;$('#resultGo').textContent='海図へ戻る ［Space］'}
-// 観戦・サマリー中のHUD：判定ゲージと残り時間、サマリーの記録。
-function flowUI(){const watch=phase==='watch',sum=phase==='summary';
- $('#prep').hidden=phase!=='prep';$('#result').hidden=phase!=='result';$('#summary').hidden=!sum;$('#watchCtl').hidden=!watch;$('#judge').hidden=!(watch||sum);$('#prepSkip').hidden=!config.skipBattle;
- if(!(watch||sum))return;
- if(watch){$('#pauseBtn').textContent=b.mode==='paused'?'再開 ［Space］':'一時停止 ［Space］';$('#pauseBtn').disabled=b.mode==='cutin'||b.mode==='ended'}
+// 観戦中のHUD：判定ゲージと残り時間、倍速ボタン。
+function flowUI(){const watch=phase==='watch';
+ $('#prep').hidden=phase!=='prep';$('#result').hidden=phase!=='result';$('#watchCtl').hidden=!watch;$('#judge').hidden=!watch;$('#prepSkip').hidden=!config.skipBattle;
+ if(!watch)return;
+ if(watch){$('#pauseBtn').textContent=b.mode==='paused'?'再開 ［Space］':'一時停止 ［Space］';$('#pauseBtn').disabled=b.mode==='cutin'||b.mode==='ended';$$('#speedCtl [data-speed]').forEach(el=>{const on=+el.dataset.speed===watchSpeed;el.classList.toggle('on',on);el.setAttribute('aria-pressed',on)})}
  {const rt=b.ratios(),left=Math.max(0,Math.ceil(b.duration-b.time)),key=`${Math.round(rt.dealtRatio*100)}:${Math.round(rt.takenRatio*100)}:${left}`;if(key!==judgeKey){judgeKey=key;$('#judge').innerHTML=gaugeHTML(rt.dealtRatio,rt.takenRatio,`<b class="jg-time">残り ${left}秒</b><small>${verdictWord(rt.dealtRatio,rt.takenRatio)}</small>`)}}
- if(sum){const fresh=b.logs.filter(l=>l.id>sumSeen).reverse();if(fresh.length){sumLog.push(...fresh);sumSeen=b.logs[0].id}const key=`${sumLog.length}:${!!b.timing}`;if(key!==sumKey){sumKey=key;const el=$('#summaryLog');el.innerHTML=sumLog.map(l=>`<div class="log-entry ${l.type}"><time>${clock(l.time)}</time><span>${esc(l.text)}</span></div>`).join('');el.scrollTop=el.scrollHeight;$('#summaryNote').textContent=b.timing?'ジョストの射出集中。通常の速さに戻りました。金色の範囲でFキーか射出ボタンを。':`戦闘を${FAST}倍速で進行中。ジョストのタイミングだけ通常の速さに戻ります。`;$('#summaryNote').classList.toggle('alert',!!b.timing)}}}
+}
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const speech=lines=>lines.map(l=>`<p><b>${esc(l.speaker)}</b><span>${esc(l.text)}</span></p>`).join('');
 function storyUI(){
@@ -81,19 +82,19 @@ function storyUI(){
 }
 function recordUI(){const rec=loadRecords()[b.difficulty];$('#bestRecord').textContent=rec?`最高評価 ${rec.rank}${rec.rank!=='—'?` · ${clock(rec.time)}${rec.battles?` · ${rec.battles}戦`:''}`:''}`:'記録なし'}
 // 状態の変化を前回値と比べて音を鳴らす。Battle が作り直されたら前回値を取り直す（鳴らさない）。
-let pb=null,pMode='',pCutin='',pRoot=0,pLunge=false,pImpact=0,lastHeart=0,pHit={};
+let pb=null,pMode='',pCutin='',pRoot=0,pLunge=false,pImpact=0,pMuz=0,pSunk=0,lastGun=0,lastHeart=0,pHit={};
 // 姫の心臓は見せず、被弾と危機を画面の揺れと「ドクン」と縮む動きで間接的に表す（動きを減らす設定ではCSS側で止まる）。
 const stage=$('.stage');function screenFx(k){if(!stage?.classList)return;stage.classList.remove(k);void stage.offsetWidth;stage.classList.add(k)}
-function sound(){const map=phase==='map',battle=phase==='watch'||phase==='summary'||phase==='prep';
+function sound(){const map=phase==='map',battle=phase==='watch'||phase==='prep';
  audio.music(story||talk.active||phase==='result'?'drama':!battle||phase==='prep'||b.enemyKind==='kin'?'march':b.enemy.form===2?'waltz2':'waltz');audio.duck(!talk.active&&((map?st.paused:b.mode==='paused')||$('#help').open));
  if(map){if(st.paused!==pPaused&&!talk.active&&!st.encounter&&!st.result&&!contactAt&&!finishAt)audio.sfx('bell');pPaused=st.paused;pb=null;return}
  if(!battle)return;
- const e=b.enemy,fl=b.flag(),ck=b.mode==='cutin'&&b.cutin?`${b.cutin.index}:${b.cutin.ids[b.cutin.index]}`:'',lunge=!!b.ship('lance')?.lunge,imp=Math.max(0,...b.effects.filter(f=>f.type==='impact').map(f=>f.id));
+ const e=b.enemy,fl=b.flag(),ck=b.mode==='cutin'&&b.cutin?`${b.cutin.index}:${b.cutin.ids[b.cutin.index]}`:'',lunge=!!b.ship('lance')?.lunge,imp=Math.max(0,...b.effects.filter(f=>f.type==='impact').map(f=>f.id)),muz=Math.max(0,...b.effects.filter(f=>f.type==='muzzle').map(f=>f.id)),sunk=e.sunk?e.sunk.filter(t=>t!=null&&t>-50).length:0;
  if(pb===b){if(b.mode!==pMode&&(b.mode==='paused'||b.mode==='ended'))audio.sfx('bell');if(ck&&ck!==pCutin)audio.sfx('cutin');if(e.rootUntil>pRoot)audio.sfx('stake');if(lunge&&!pLunge)audio.sfx('cross');if(imp>pImpact)audio.sfx('hit');
-  const now=performance.now();if(b.mode==='running'&&fl.hp>0&&fl.hp/fl.maxHp<=.3&&now-lastHeart>1000){lastHeart=now;audio.sfx('heart');screenFx('fx-beat')}
+  const now=performance.now();if(muz>pMuz&&now-lastGun>700){lastGun=now;audio.sfx('hit')}if(sunk>pSunk)audio.sfx('stake');if(b.mode==='running'&&fl.hp>0&&fl.hp/fl.maxHp<=.3&&now-lastHeart>1000){lastHeart=now;audio.sfx('heart');screenFx('fx-beat')}
   for(const s of b.ships)if(s.hitUntil>(pHit[s.id]||0)){if(s===fl){screenFx('fx-hit');setTimeout(()=>screenFx('fx-beat'),200)}else screenFx('fx-bump')}}
  for(const s of b.ships)pHit[s.id]=s.hitUntil;
- pb=b;pMode=b.mode;pCutin=ck;pRoot=e.rootUntil;pLunge=lunge;pImpact=imp}
+ pb=b;pMode=b.mode;pCutin=ck;pRoot=e.rootUntil;pLunge=lunge;pImpact=imp;pMuz=muz;pSunk=sunk}
 function ui(){storyUI();flowUI();sound();const map=inMap(),body=document.body;
  if(body){body.dataset.view=map?'map':'battle';body.dataset.mode=map?(st.paused?'paused':'running'):b.mode;body.dataset.phase=phase||'';body.dataset.threat=!map&&b.enemy.attack&&b.mode!=='ended'?'on':'';body.dataset.story=story||phase==='prep'||phase==='result'?'on':'';body.dataset.talk=talk.active?'on':''}
  const hint=map?'ドラッグ：視点移動 ／ ホイール：ズーム ／ 艦隊をクリックで選択、海面をクリックで移動 ／ Space：進行・戦術ポーズ':'ドラッグ：旋回 ／ ホイール：ズーム ／ Space：一時停止・再開 ／ F：ジョスト射出';if(hint!==hintKey){hintKey=hint;$('#cameraHint').textContent=hint}
@@ -112,7 +113,7 @@ function mapUI(){
  $('#chartTip').textContent='海域全図 · クリックで移動指示';drawMapChart()}
 const fleetState=f=>Math.hypot(f.x-LAMP.x,f.y-LAMP.y)<=LAMP.r+60?'補給圏':f.target?'移動中':'待機';
 function battleUI(){$('#clock').textContent=clock(b.time);$('#statusText').textContent={ready:'出撃準備',running:'交戦中',paused:'一時停止',cutin:'騎士の誓い',ended:'戦闘終了'}[b.mode];$('#bossName').textContent=b.enemyName;
- $('#monsterBar').style.width=$('#monsterLag').style.width=b.enemy.hp/b.enemy.maxHp*100+'%';$('#monsterText').textContent=`${Math.ceil(b.enemy.hp)} / ${b.enemy.maxHp}`;$('#formLabel').textContent=b.enemy.form===2?'第二形態':'第一形態';$('#bleedText').innerHTML=`<span class="bleed-label">失血</span>${'<i class="on"></i>'.repeat(b.enemy.bleed)}${'<i></i>'.repeat(5-b.enemy.bleed)}${b.enemy.rootUntil>b.time?'<span class="tag root">拘束中</span>':''}`;
+ $('#monsterBar').style.width=$('#monsterLag').style.width=b.enemy.hp/b.enemy.maxHp*100+'%';$('#monsterText').textContent=`${Math.ceil(b.enemy.hp)} / ${b.enemy.maxHp}`;$('#formLabel').textContent=b.enemyKind==='kin'?`残り${swarmAlive(b.enemy)}体`:b.enemy.form===2?'第二形態':'第一形態';$('#bleedText').innerHTML=`<span class="bleed-label">失血</span>${'<i class="on"></i>'.repeat(b.enemy.bleed)}${'<i></i>'.repeat(5-b.enemy.bleed)}${b.enemy.rootUntil>b.time?'<span class="tag root">拘束中</span>':''}`;
  for(const s of b.ships){$(`#${s.id}-hp`).textContent=`${Math.ceil(s.hp)} / ${s.maxHp}`;$(`#${s.id}-hpbar`).style.width=s.hp/s.maxHp*100+'%';$(`#${s.id}-status`).textContent=s.hp<=0?'戦闘不能':s.status;$(`#${s.id}-blood`).textContent=`血${Math.floor(s.blood)}${s.blood>=25?` · 強化${Math.floor(s.blood/25)}`:''}`;$(`#${s.id}-bloodbar`).style.width=s.blood+'%';$(`[data-ship="${s.id}"]`).classList.toggle('down',s.hp<=0)}
  const a=b.enemy.attack,counter=!a&&b.time<b.enemy.recoveryUntil;$('#threatStrip').classList.toggle('danger',!!a&&b.mode!=='ended');$('#threatStrip').classList.toggle('chance',counter);$('#threatTitle').textContent=a?(a.type==='slam'?'血潮の墜落':'薙ぎ払い'):'';$('#threatTime').textContent=a?(a.duration-a.age).toFixed(1):'';$('#threatText').textContent=b.mode==='ended'?b.reason:a?(a.type==='slam'?`${b.ship(a.targetId).name}の足元 · 赤い円の全艦に命中`:'赤い扇形の範囲の全艦に命中'):(counter?'反撃チャンス！ 敵は後隙 · ジョストで押し戻せ':'');
  $('#cutin').hidden=b.mode!=='cutin';if(b.cutin){const id=b.cutin.ids[b.cutin.index],sk=SKILLS[id];$('#cutin').style.setProperty('--cutin-color',b.ship(id).accent||b.ship(id).color);$('#cutin').style.setProperty('--cutin-ink',b.ship(id).accent?'#fff':'#0a1620');$('#cutinCount').textContent=`${b.cutin.index+1} / ${b.cutin.ids.length}`;const key=`${b.time}:${b.cutin.index}:${id}`;if(key!==cutinKey){cutinKey=key;const el=$('#cutin');el.classList.remove('play');void el.offsetWidth;el.classList.add('play')}$('#cutinCrest').textContent=sk.crest;const portrait=$('#cutinPortrait');if(portrait){const src=PORTRAITS[id];portrait.hidden=!src;if(src&&portrait.getAttribute('src')!==src)portrait.src=src;$('#cutin').classList.toggle('has-portrait',!!src)}$('#cutinKnight').textContent=b.ship(id).name;$('#cutin').classList.toggle('declare',!!sk.declare);$('#cutinSkill').textContent=sk.declare?sk.quote.replace('、','、\n'):sk.name;$('#cutinQuote').textContent=sk.declare?`〈${sk.name}〉`:sk.quote;}
@@ -144,7 +145,7 @@ function drawMapChart(){if(!chartCtx)return;const dpr=Math.min(2,window.devicePi
 const touch=window.matchMedia('(pointer: coarse)').matches;
 const talk=createTalk({root:$('#talk'),stage:$('.stage'),audio,shake:()=>screenFx('fx-hit'),onTap:()=>landscape()});
 function landscape(){if(!touch||document.fullscreenElement||!document.documentElement?.requestFullscreen)return;document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation?.lock?.('landscape')).catch(()=>{})}
-$('#storyGo').onclick=()=>{landscape();newGame()};$('#resetBtn').onclick=newGame;$('#prepGo').onclick=()=>{landscape();launch('watch')};$('#prepSummary').onclick=()=>{landscape();launch('summary')};$('#prepSkip').onclick=()=>launch('skip');$('#resultGo').onclick=backToMap;$('#pauseBtn').onclick=play;$('#toSummary').onclick=toSummary;
+$('#storyGo').onclick=()=>{landscape();newGame()};$('#resetBtn').onclick=newGame;$('#prepGo').onclick=()=>{landscape();launch('watch')};$('#prepSkip').onclick=()=>launch('skip');$('#resultGo').onclick=backToMap;$('#pauseBtn').onclick=play;$('#speedCtl').onclick=ev=>{const el=ev.target.closest('[data-speed]');if(!el)return;setSpeed(+el.dataset.speed);el.blur()};
 $('#prepFormations').onclick=ev=>{const el=ev.target.closest('[data-form]');if(!el)return;fleetOf().formation=el.dataset.form;prepChanged()};$('#prepSkills').onclick=ev=>{const el=ev.target.closest('[data-skill]');if(!el)return;const o=fleetOf().skillOrder,i=o.indexOf(el.dataset.skill);if(i>=0)o.splice(i,1);else o.push(el.dataset.skill);prepChanged()};
 // 戦略マップの操作：再生／ポーズ、停止、倍速、艦隊の選択、海面・海図のクリックで移動指示。
 $('#mapPlay').onclick=ev=>{togglePause();ev.currentTarget.blur()};$('#mapStop').onclick=ev=>{if(fleetSel)st.stop(fleetSel);ev.currentTarget.blur();ui()};$('#mapSpeed').onclick=ev=>{mapSpeed=SPEEDS[(SPEEDS.indexOf(mapSpeed)+1)%SPEEDS.length];ev.currentTarget.blur();ui()};
@@ -157,7 +158,7 @@ $('#prepMenu').onclick=()=>$('#helpBtn').click();$('#helpBtn').onclick=()=>{if(b
 $('#viewMode').onchange=e=>{renderer?.setView(e.target.value);config.view=e.target.value;saveConfig(config)};$('#zoomIn').onclick=()=>renderer?.zoomBy(.85);$('#zoomOut').onclick=()=>renderer?.zoomBy(1.17);$('#cameraReset').onclick=()=>renderer?.resetCamera();
 $('#sea').addEventListener('renderlost',()=>{if(b.mode==='cutin')b.finishCutins();b.pause('3D表示が停止しました','ページを再読み込みしてください。');st.paused=true;$('#renderError').hidden=false;$('#renderError').textContent='3D描画が中断されました。ページを再読み込みしてください。';ui()});
 
-document.addEventListener('keydown',ev=>{if(['INPUT','SELECT','TEXTAREA'].includes(ev.target.tagName)||ev.repeat)return;const play_=phase==='watch'||phase==='summary';if(ev.key.toLowerCase()==='f'){ev.preventDefault();if(play_){b.pressTiming();ui()}return}if(phase==='map'&&(ev.key==='1'||ev.key==='2')){const f=st.fleets[+ev.key-1];if(f){fleetSel=f.id;ui()}return}if(ev.code==='Space'&&ev.target.tagName!=='BUTTON'){ev.preventDefault();play()}});
+document.addEventListener('keydown',ev=>{if(['INPUT','SELECT','TEXTAREA'].includes(ev.target.tagName)||ev.repeat)return;const play_=phase==='watch';if(play_&&['1','2','4'].includes(ev.key)){setSpeed(+ev.key);return}if(ev.key.toLowerCase()==='f'){ev.preventDefault();if(play_){b.pressTiming();ui()}return}if(phase==='map'&&(ev.key==='1'||ev.key==='2')){const f=st.fleets[+ev.key-1];if(f){fleetSel=f.id;ui()}return}if(ev.code==='Space'&&ev.target.tagName!=='BUTTON'){ev.preventDefault();play()}});
 const portrait=window.matchMedia('(orientation: portrait) and (pointer: coarse) and (max-width: 820px)');portrait.addEventListener?.('change',e=>{if(!e.matches)return;if(b.mode==='cutin')b.finishCutins();if(b.mode==='running')b.pause('縦向きのため停止','横向きに戻して再開してください。');if(phase==='map')st.paused=true;ui()});
 const unlock=()=>audio.unlock();document.addEventListener('pointerdown',unlock);document.addEventListener('keydown',unlock);document.addEventListener('click',ev=>{if(ev.target.closest?.('button,.order-option'))audio.sfx('ui')},true);document.addEventListener('click',ev=>{if(ev.detail>0)ev.target.closest?.('button')?.blur()});document.addEventListener('visibilitychange',()=>audio.suspend(document.hidden));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(b.mode==='cutin')b.finishCutins();if(b.mode==='running')b.pause('画面を離れたため停止','戻ったら再開してください。');if(phase==='map')st.paused=true;ui()}});
@@ -169,11 +170,13 @@ function mapFrame(now,dt){
  for(let left=dt*mapSpeed;left>1e-9&&!st.paused&&!st.encounter&&!st.result;left-=.1)st.step(Math.min(.1,left));
  // 幕間：戦闘を経験した主力艦隊が初めて峰の灯の補給圏に入ったら、進行を止めて会話を流す。
  if(!st.seen.interlude&&st.battles>0&&!st.encounter&&!st.result){const m=st.fleet('main');if(m&&fleetState(m)==='補給圏'){st.seen.interlude=true;st.paused=true;scene('interlude-lamp',toMap)}}}
-function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);last=now;const watch=phase==='watch',fast=phase==='summary';
+function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);last=now;const watch=phase==='watch';
  if(phase==='map')mapFrame(now,Math.min(.25,raw));
- else if(watch||fast){if(fast){if(b.mode==='paused'&&!document.hidden&&!$('#help').open)b.resume();if(b.mode==='cutin')b.finishCutins()}b.advancePresentation(dt);
-  if(b.mode==='running'){acc+=dt*(b.timing?.12:fast?FAST:1);for(let n=0;acc>=TICK&&b.mode==='running'&&n<600;n++){b.step(TICK);acc-=TICK;if(fast&&b.mode==='cutin')b.finishCutins();if(fast&&b.timing){acc=0;break}}}else acc=0;
-  if(b.mode==='ended'){if(!endAt)endAt=now+(watch?1500:350);else if(now>=endAt)toResult(b.report())}}
+ else if(watch){b.shortCutin=config.shortCutin||watchSpeed>1;
+  // 撃破の瞬間は0.6秒ほどスロー（動きを減らす設定では使わない）。倍速のあいだもカットインだけは速く、ジョストの射出集中は通常の速さ（0.12倍）に戻す。
+  const slow=b.mode==='ended'&&b.decided==='kill'&&endAt&&now<endAt-1800&&!renderer?.reducedMotion?.3:1;b.advancePresentation(dt*slow*(b.mode==='cutin'?watchSpeed:1));
+  if(b.mode==='running'){acc+=dt*(b.timing?.12:watchSpeed);for(let n=0;acc>=TICK&&b.mode==='running'&&n<600;n++){b.step(TICK);acc-=TICK}}else acc=0;
+  if(b.mode==='ended'){if(!endAt)endAt=now+(b.decided==='kill'?2400:1500);else if(now>=endAt)toResult(b.report())}}
  if(now-lastUI>40){ui();lastUI=now}if(talk.active&&talk.bg==='sea')renderer?.render(b,b.flag().id,false);else if(inMap()||talk.active)renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
-Object.defineProperty(window,'__st',{get:()=>st});
+Object.defineProperty(window,'__st',{get:()=>st});Object.defineProperty(window,'__battle',{get:()=>b});
 build();recordUI();ui();requestAnimationFrame(frame);scene('prologue',toMap);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
-import {Battle} from '../dist/battle.mjs';
+import {Battle,swarmAlive} from '../dist/battle.mjs';
 import {LAMP} from '../dist/strategy.mjs';
 import {cameraState,shipCamera,project,groundPoint,world,meshes,normalMatrix} from '../dist/space3d.mjs';
 import {buildScene,bloodTexture} from '../dist/scene3d.mjs';
@@ -16,6 +16,19 @@ for(const o of [...scene.solid,...scene.transparent]){assert(meshes[o.mesh]);ass
 // Every telegraph phase of the slam must stay invertible (a zero-radius ring breaks normalMatrix).
 const slam=new Battle();slam.mode='running';slam.enemy.form=2;slam.enemy.attackCount=1;slam.enemyWindup();for(const age of [0,1.7,3.399,3.4]){slam.enemy.attack.age=age;const s2=buildScene(slam);for(const o of [...s2.solid,...s2.transparent])assert(normalMatrix(o.model),`slam telegraph at ${age}s`)}
 slam.enemyImpact(slam.enemy.attack);for(const age of [0,.45,.89]){slam.effects.forEach(f=>f.age=age);const s3=buildScene(slam);for(const o of [...s3.solid,...s3.transparent])assert(normalMatrix(o.model),`slam impact at ${age}s`)}
+// 眷属の群れ（4体の泳ぎ・飛びかかり・薙ぎ払い・沈没・撃破後の沈み）と砲撃（砲弾・閃光・水柱）と航跡：全モデルが有限値で逆行列を持つ。
+{const ok=sc=>{for(const o of [...sc.solid,...sc.transparent]){assert(meshes[o.mesh]);assert(o.model.every(Number.isFinite));assert(normalMatrix(o.model),'invertible');assert(o.color.every(Number.isFinite));assert(Number.isFinite(o.glow))}};
+ const eyes=sc=>sc.solid.filter(o=>o.color[0]===1&&o.color[1]===.62&&o.glow>1).length;
+ const k=new Battle({enemyKind:'kin',fleet:['lance','stake','escort','escort'],auto:true,island:false});k.start();k.ships.forEach((x,i)=>{x.x=k.enemy.x-210;x.y=k.enemy.y+(i-1.5)*60});
+ assert(eyes(buildScene(k))>=8,'4 glowing-eyed monsters');let kinds=new Set();
+ k.ships.forEach(x=>x.x-=190);k.enemy.nextAttack=0;for(let i=0;i<30;i++){k.step(.025);for(const f of k.effects)kinds.add(f.type);ok(buildScene(k))}k.ships.forEach(x=>x.x+=190);k.enemy.nextAttack=3;
+ for(let i=0;i<520;i++){k.step(.025);for(const f of k.effects)kinds.add(f.type);if(i%13===0)ok(buildScene(k,'lance',true))}
+ for(const t of ['muzzle','splash','leap'])assert(kinds.has(t),'effect '+t);
+ const w=k.ships.find(x=>x.kind==='escort');assert(w.trail.length>3);
+ for(const dmg of [110,110,110]){k.hitEnemy(dmg,'stake',k.ship('stake'));for(const age of [0,.5,1.2]){k.effects.forEach(f=>f.age=Math.min(f.age,age));ok(buildScene(k))}}
+ k.after+=2;assert.equal(eyes(buildScene(k)),2*swarmAlive(k.enemy),'eyes follow the living monsters');assert(swarmAlive(k.enemy)<4);
+ k.hitEnemy(1e4,'stake',k.ship('stake'));assert.equal(k.mode,'ended');for(let i=0;i<60;i++){k.advancePresentation(.05);ok(buildScene(k))}assert.equal(eyes(buildScene(k)),0,'all sunk');
+ const n=new Battle({auto:true});n.start();n.hitEnemy(1e5,'stake',n.ship('stake'));for(let i=0;i<40;i++){n.advancePresentation(.05);ok(buildScene(n))}}
 for(const g of Object.values(meshes)){assert.equal(g.vertices.length,g.normals.length);assert.equal(g.vertices.length%9,0);assert(g.vertices.every(Number.isFinite));}
 // 戦略マップ：全モデルが有限値で、法線行列が逆行列を持つ。艦隊の選択・移動先・敵の出現・島の包囲の各状態を含める。
 {const st=new Strategy();st.order('main',900,700);st.enemy('kin3').active=true;st.enemy('nephilim').x=LAMP.x+LAMP.r+30;st.enemy('nephilim').y=LAMP.y;st.enemy('nephilim').siege=true;st.fleet('detached').ships[1].hp=0;
