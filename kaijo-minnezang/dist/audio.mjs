@@ -55,7 +55,14 @@ export function createAudio(){
   hit(t){if(!gate('hit',.08))return;tone('sine',130,t,.16,.4,{sweep:50,decay:true});noise(t,.09,.18,{freq:600})},
   heart(t){tone('sine',62,t,.2,.5,{sweep:40,decay:true});tone('sine',55,t+.23,.22,.35,{sweep:36,decay:true})},
   cutin(t){[1800,2700,4200].forEach((f,i)=>tone('triangle',f,t+i*.04,.5,.07,{decay:true}));noise(t,.18,.1,{type:'highpass',freq:3000,sweep:9000})},
-  ui(t){tone('sine',900,t,.05,.05,{sweep:600,decay:true})}};
+  ui(t){tone('sine',900,t,.05,.05,{sweep:600,decay:true})},
+  // 会話の動きに添えるコミカルな短い音（台詞のじゃまにならない音量）
+  'm-hop'(t){tone('sine',380,t,.16,.07,{sweep:1000,decay:true});tone('sine',620,t+.17,.08,.04,{sweep:420,decay:true})},
+  'm-sway'(t){const o=ctx.createOscillator(),l=ctx.createOscillator(),d=ctx.createGain(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(520,t);o.frequency.exponentialRampToValueAtTime(380,t+.35);l.frequency.value=14;d.gain.value=40;l.connect(d);d.connect(o.frequency);o.connect(g);g.connect(bus.sfx);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.06,t+.04);g.gain.exponentialRampToValueAtTime(.0001,t+.35);o.start(t);l.start(t);o.stop(t+.4);l.stop(t+.4)},
+  'm-recoil'(t){noise(t,.14,.08,{type:'bandpass',freq:2600,sweep:700,q:.8});tone('triangle',420,t,.22,.06,{sweep:150,decay:true})},
+  'm-lunge'(t){noise(t,.2,.09,{type:'bandpass',freq:500,sweep:4200,q:1.4,attack:.1})},
+  'm-tremble'(t){const o=ctx.createOscillator(),l=ctx.createOscillator(),d=ctx.createGain(),g=ctx.createGain();o.type='triangle';o.frequency.value=680;l.frequency.value=26;d.gain.value=.04;l.connect(d);d.connect(g.gain);o.connect(g);g.connect(bus.sfx);g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+.34);o.start(t);l.start(t);o.stop(t+.36);l.stop(t+.36)},
+  'm-nod'(t){tone('sine',1040,t,.1,.07,{sweep:700,decay:true});tone('sine',2080,t,.05,.025,{decay:true})}};
  return {
   unlock(){if(ctx){if(ctx.state==='suspended'&&!document.hidden)ctx.resume();return}try{ctx=new AC();master=ctx.createGain();master.connect(ctx.destination);for(const k of ['music','sfx','env']){bus[k]=ctx.createGain();bus[k].connect(master)}bus.env.gain.value=.3;bus.sfx.gain.value=.8;
    noiseBuf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;

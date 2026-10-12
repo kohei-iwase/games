@@ -1,5 +1,5 @@
 // 物語パートの会話画面（立ち絵のADV）。story.mjs の命令列を、#talk の DOM に再生する。
-// 背景の3Dは app.mjs が描く。ここは .stage に talk-sea／talk-chart／talk-black を付けて、ぼかし・暗さだけを CSS に任せる。
+// 背景は .stage に talk-sea／talk-chart／talk-black を付け、CSS が海の絵（art/bg-sea.jpg）・暗い海の絵・真っ黒を敷く。
 import {EMOTIONS,MOTIONS} from './story.mjs';
 import {DEFAULT_HERO_NAME} from './config.mjs';
 const TYPE_MS=34,FX_MS={flash:620,fadeout:1400,fadein:1200,shake:560};
@@ -10,6 +10,7 @@ const SLIDE={left:'-34vw',center:'0',right:'34vw'};
 export function createTalk(opts){
  const {root,stage,audio,hero}=opts,$=s=>root.querySelector(s);
  const el={fade:$('#talkFade'),flash:$('#talkFlash'),stageBox:$('#talkFigures'),box:$('#talkBox'),name:$('#talkName'),text:$('#talkText'),next:$('#talkNext'),log:$('#talkLogView'),logList:$('#talkLogList'),choice:$('#talkChoice'),choiceTitle:$('#talkChoiceTitle'),choiceList:$('#talkChoiceList'),nameModal:$('#talkNameModal'),nameForm:$('#talkNameForm'),nameInput:$('#talkNameInput')};
+ const fxLayer=document.createElement('div');fxLayer.className='talk-fxlayer';root.appendChild(fxLayer); // 感情の記号は立ち絵・台詞枠より前のこの層に出す
  const slots={};for(const pos of ['left','center','right'])slots[pos]=el.stageBox.querySelector(`[data-pos="${pos}"]`);
  const s={active:false,bg:'black',cmds:[],i:0,done:null,wait:null,typing:null,full:'',shown:0,blocked:null,busyUntil:0,log:[],ghost:false,pick:null};
 
@@ -31,7 +32,7 @@ export function createTalk(opts){
  function leave(sl){
   if(!sl.dataset.who)return;sl.dataset.who='';sl.classList.remove('speaking');sl.classList.add('out');
   setTimeout(()=>{if(!sl.dataset.who)sl.classList.remove('shown','out')},560)}
- const clearStage=()=>{for(const sl of Object.values(slots)){sl.dataset.who='';sl.className='talk-slot';sl.removeAttribute('data-emo');sl.querySelectorAll('.talk-sym').forEach(e=>e.remove())}};
+ const clearStage=()=>{for(const sl of Object.values(slots)){sl.dataset.who='';sl.className='talk-slot';sl.removeAttribute('data-emo');}fxLayer.textContent=''};
 
  // 話者を前に出す。感情の色味は data-emo、動きは img の animation。
  function speak(c){
@@ -39,11 +40,13 @@ export function createTalk(opts){
   const sl=c.who.key&&slotOf(c.who.key);if(!sl)return;
   sl.classList.add('speaking');if(c.emotion)sl.dataset.emo=EMOTIONS[c.emotion];
   const img=sl.firstElementChild.firstElementChild;for(const m of Object.values(MOTIONS))img.classList.remove('m-'+m);
-  if(c.motion){void img.offsetWidth;img.classList.add('m-'+MOTIONS[c.motion])}
+  if(c.motion){void img.offsetWidth;img.classList.add('m-'+MOTIONS[c.motion]);audio.sfx('m-'+MOTIONS[c.motion])}
   if(c.symbol)symbol(sl,c.symbol)}
- // 頭上の記号をポンと出す（弾んで、1.5秒ほどで消える）。
+ // 話者の頭の横に記号をポンと出す（前面の層に置く。弾んで、1.5秒ほどで消える）。
  function symbol(sl,sym){
-  const fig=sl.firstElementChild,e=document.createElement('span');e.className='talk-sym sym-'+sym.kind;e.textContent=sym.text;e.setAttribute('aria-hidden','true');fig.appendChild(e);setTimeout(()=>e.remove(),SYMBOL_MS)}
+  const e=document.createElement('span'),r=root.getBoundingClientRect(),f=sl.firstElementChild.firstElementChild.getBoundingClientRect();
+  e.className='talk-sym sym-'+sym.kind;e.textContent=sym.text;e.setAttribute('aria-hidden','true');
+  e.style.left=(f.left+f.width*.72-r.left)+'px';e.style.top=(f.top+f.height*.06-r.top)+'px';fxLayer.appendChild(e);setTimeout(()=>e.remove(),SYMBOL_MS)}
 
  function type(text){
   clearInterval(s.typing);s.full=text;s.shown=0;el.text.textContent='';el.next.hidden=true;
