@@ -1,13 +1,13 @@
 import {meshes,normalMatrix,cameraState,cameraFrom,shipCamera,project,groundPoint,world,clamp} from './space3d.mjs';
 import {vertexShader,fragmentShader} from './shaders3d.mjs';
-import {buildScene,bloodTexture} from './scene3d.mjs';
-import {FLAGSHIP} from './battle.mjs';
+import {buildScene,bloodTexture,shipPose} from './scene3d.mjs';
+import {FLAGSHIP,swarmAlive,SWARM} from './battle.mjs';
 import {buildMapScene,mapWorld,mapFromGround,shipMaxHp,FLEET_COLOR} from './mapscene3d.mjs';
 import {MAP,LAMP} from './strategy.mjs';
 const VIEW_PITCH={rear:.32,first:-.08,overview:0};
 export class SeaRenderer {
  constructor(canvas,{reducedMotion=false}={}){
-  this.canvas=canvas;this.reducedMotion=reducedMotion;this.view='rear';this.flagship=FLAGSHIP;this.heading=null;this.lookYaw=0;this.pitch=VIEW_PITCH.rear;this.lastFrame=0;this.yaw=.12;this.elevation=.82;this.zoom=1;this.drag=null;this.dragged=false;this.bloodTime=-1;this.lastBattle=null;this.lost=false;this.map=false;this.mapZoom=1;this.mapAt=[0,0];
+  this.canvas=canvas;this.reducedMotion=reducedMotion;this.view='rear';this.flagship=FLAGSHIP;this.heading=null;this.lookYaw=0;this.pitch=VIEW_PITCH.rear;this.lastFrame=0;this.yaw=.12;this.elevation=.82;this.zoom=1;this.drag=null;this.dragged=false;this.bloodTime=-1;this.lastBattle=null;this.dirFor=null;this.openT=0;this.push=0;this.dir=null;this.lost=false;this.map=false;this.mapZoom=1;this.mapAt=[0,0];
   this.overlay=document.querySelector('#seaLabels');this.ctx=this.overlay.getContext('2d');
   const gl=canvas.getContext('webgl',{antialias:true,alpha:false,powerPreference:'high-performance'});if(!gl)throw new Error('3D表示にはWebGLが必要です。ブラウザのグラフィックアクセラレーションを有効にして再読み込みしてください。');this.gl=gl;
   const shader=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s};
@@ -29,11 +29,19 @@ export class SeaRenderer {
  setView(view){this.view=VIEW_PITCH[view]===undefined?'rear':view;this.resetCamera();this.heading=null}
  followed(b){const f=b.ship(this.flagship);return f&&f.hp>0?f:b.ships.find(s=>s.hp>0)||f}
  // The camera turns with the flagship, eased so sharp course changes do not snap the view.
- follow(b){const s=this.followed(b),now=performance.now(),dt=this.lastFrame?Math.min(.1,(now-this.lastFrame)/1000):0;this.lastFrame=now;if(!s)return;if(this.heading===null||this.reducedMotion)this.heading=s.angle;else{const d=Math.atan2(Math.sin(s.angle-this.heading),Math.cos(s.angle-this.heading));this.heading+=d*Math.min(1,dt*2.5)}}
+ follow(b){const s=this.followed(b),now=performance.now(),dt=this.lastFrame?Math.min(.1,(now-this.lastFrame)/1000):0;this.lastFrame=now;this.direct(b,dt);if(!s)return;if(this.heading===null||this.reducedMotion)this.heading=s.angle;else{const d=Math.atan2(Math.sin(s.angle-this.heading),Math.cos(s.angle-this.heading));this.heading+=d*Math.min(1,dt*2.5)}}
+ // 観戦のカメラワーク。開戦の約1.5秒は戦場全体の引き→旗艦の後方へ戻る。連携・ジョストの射出・撃破では寄る（動きを減らす設定では寄らない）。俯瞰の視点では控えめ。戦略マップと準備画面（mode=ready）には影響しない。
+ direct(b,dt){if(this.dirFor!==b){this.dirFor=b;this.openT=0;this.push=0}this.dir=null;if(b.mode==='ready')return;if(b.mode==='running'&&b.time<20)this.openT+=dt;const over=this.view==='overview',lance=b.ship('lance'),lunge=lance?.lunge,big=b.effects.find(f=>f.type==='impact'&&f.size>=75&&f.age>=0);
+  const open=over||b.time>3?0:this.reducedMotion?(this.openT<2?1:0):this.openT<1.5?1:Math.max(0,1-(this.openT-1.5)/.9);
+  let tp=0;if(!this.reducedMotion){if(b.timing)tp=.45;if(lunge)tp=Math.max(tp,lunge.age<.15?lunge.age/.15:lunge.age<.7?1:Math.max(0,(.95-lunge.age)/.25));if(big)tp=Math.max(tp,.8*(1-big.age/big.life));if(b.mode==='ended'&&b.decided==='kill')tp=.8*Math.min(1,b.after/.6)}
+  this.push+=(tp*(over?.35:1)-this.push)*Math.min(1,dt*(tp>this.push?9:3));const e=b.enemy,f=lance&&lance.hp>0?lance:b.flag();this.dir={open,push:this.push,focus:world((f.x+e.x)/2,(f.y+e.y)/2,40)}}
+
  zoomBy(f){if(this.map)this.mapZoom=clamp(this.mapZoom*f,.35,1.25);else this.zoom=clamp(this.zoom*f,.65,1.7)}
  point(event){if(this.dragged){this.dragged=false;return null}const r=this.canvas.getBoundingClientRect();this.updateCamera();const p=groundPoint(this.camera.inv,event.clientX-r.left,event.clientY-r.top,r.width,r.height);return p&&p.x>=0&&p.x<=1000&&p.y>=0&&p.y<=650?p:null}
  pickShip(event,b){if(!this.camera)return null;const r=this.canvas.getBoundingClientRect(),x=event.clientX-r.left,y=event.clientY-r.top;let closest=null,d=52;for(const s of b.ships){const p=project(this.camera.vp,world(s.x,s.y,30),r.width,r.height);if(!p)continue;const n=Math.hypot(p.x-x,p.y-y);if(n<d){closest=s;d=n}}return closest}
- updateCamera(b=this.lastBattle){const aspect=this.canvas.clientWidth/this.canvas.clientHeight,s=b&&this.view!=='overview'?this.followed(b):null;this.camera=s?shipCamera(aspect,this.view,s,(this.heading??s.angle)+this.lookYaw,this.pitch,this.zoom):cameraState(aspect,this.yaw,this.elevation,this.zoom)}
+ updateCamera(b=this.lastBattle){const aspect=this.canvas.clientWidth/this.canvas.clientHeight,s=b&&this.view!=='overview'?this.followed(b):null;let c=s?shipCamera(aspect,this.view,s,(this.heading??s.angle)+this.lookYaw,this.pitch,this.zoom):cameraState(aspect,this.yaw,this.elevation,this.zoom);const d=b&&this.dirFor===b?this.dir:null;
+  if(d&&(d.open>.001||d.push>.001)){const mix=(a,z,k)=>a.map((v,i)=>v+(z[i]-v)*k);let eye=c.eye,tg=c.target,fov=c.fov;if(d.open>.001){const w=cameraState(aspect,.5,.62,1);eye=mix(eye,w.eye,d.open);tg=mix(tg,w.target,d.open);fov+=(w.fov-fov)*d.open}if(d.push>.001){tg=mix(tg,d.focus,d.push*.6);eye=mix(eye,tg,d.push*.2)}c=cameraFrom(aspect,eye,tg,fov,c.near)}
+  this.camera=c}
  render(b,selected,showRange){
   this.map=false;if(this.lost)return;const gl=this.gl,w=this.canvas.clientWidth,h=this.canvas.clientHeight;if(!w||!h)return;const dpr=Math.min(globalThis.devicePixelRatio||1,1.7);
   if(this.canvas.width!==Math.round(w*dpr)||this.canvas.height!==Math.round(h*dpr)){this.canvas.width=Math.round(w*dpr);this.canvas.height=Math.round(h*dpr);this.overlay.width=this.canvas.width;this.overlay.height=this.canvas.height;}
@@ -46,9 +54,11 @@ export class SeaRenderer {
  }
  draw(obj){const gl=this.gl,u=this.locations,buf=this.buffers[obj.mesh];gl.bindBuffer(gl.ARRAY_BUFFER,buf.position);gl.enableVertexAttribArray(u.aPosition);gl.vertexAttribPointer(u.aPosition,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,buf.normal);gl.enableVertexAttribArray(u.aNormal);gl.vertexAttribPointer(u.aNormal,3,gl.FLOAT,false,0,0);gl.uniformMatrix4fv(u.uModel,false,obj.model);gl.uniformMatrix3fv(u.uNormal,false,normalMatrix(obj.model));gl.uniform4fv(u.uColor,obj.color);gl.uniform1f(u.uGlow,obj.glow);gl.uniform1f(u.uWater,obj.water);gl.drawArrays(gl.TRIANGLES,0,buf.count);}
  labels(b,selected,w,h,dpr){const c=this.ctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.textAlign='center';c.textBaseline='middle';const at=(x,y,z)=>project(this.camera.vp,world(x,y,z),w,h);
+  // 頭上の体力バー（金の細縁・残り3割で赤）。
+  const bar=(x,y,bw,r,col)=>{r=clamp(r,0,1);c.fillStyle='#0a0612e8';c.fillRect(x-bw/2-1,y-2,bw+2,7);c.fillStyle=r<.3?'#f77d99':col;c.fillRect(x-bw/2,y-1,bw*r,5);c.strokeStyle='#e2c07a99';c.lineWidth=1;c.strokeRect(x-bw/2-.5,y-2.5,bw+1,6)};
   const pill=(text,p,color,size=12)=>{if(!p||p.depth>1||p.x<-100||p.x>w+100||p.y<0||p.y>h)return;c.font=`500 ${size}px system-ui,sans-serif`;const bw=c.measureText(text).width+18;c.fillStyle='#06121dea';c.fillRect(p.x-bw/2,p.y-12,bw,24);c.fillStyle=color;c.fillText(text,p.x,p.y);};
-  for(const s of b.ships){if(this.view==='first'&&s===this.followed(b))continue;const p=at(s.x,s.y,113);if(!p||p.depth>1)continue;p.x=clamp(p.x,65,w-65);p.y=clamp(p.y,45,h-40);pill(`${s.name} · 血${Math.floor(s.blood)}`,p,s.hp>0?s.color:'#9ba2a7',selected===s.id?13:11);c.fillStyle='#112632';c.fillRect(p.x-42,p.y+14,84,4);c.fillStyle=s.hp/s.maxHp<.3?'#f77d99':s.color;c.fillRect(p.x-42,p.y+14,84*s.hp/s.maxHp,4);if(b.protected(s))pill('防護 · 押し戻し無効',{x:p.x,y:p.y+35,depth:0},'#aed6ff',10);}
-  const e=b.enemy;const ep=at(e.x,e.y,240);pill(e.hp<=0?`${b.enemyName}撃破`:e.form===2?`${b.enemyName} · 第二形態`:b.enemyName,ep,'#f2b0bf',13);
+  for(const s of b.ships){if(this.view==='first'&&s===this.followed(b))continue;const po=shipPose(b,s),p=at(po.x,po.y,113);if(!p||p.depth>1)continue;p.x=clamp(p.x,65,w-65);p.y=clamp(p.y,45,h-40);pill(`${s.name} · 血${Math.floor(s.blood)}`,p,s.hp>0?s.color:'#9ba2a7',selected===s.id?13:11);bar(p.x,p.y+15,84,s.hp/s.maxHp,s.color);if(b.protected(s))pill('防護 · 押し戻し無効',{x:p.x,y:p.y+35,depth:0},'#aed6ff',10);}
+  const e=b.enemy,kin=b.enemyKind==='kin',ep=at(e.x,e.y,kin?96:240);pill(e.hp<=0?`${b.enemyName}撃破`:kin?`${b.enemyName} ×${swarmAlive(e)}/${SWARM}`:e.form===2?`${b.enemyName} · 第二形態`:b.enemyName,ep,'#f2b0bf',13);if(ep&&ep.depth<=1&&e.hp>0)bar(ep.x,ep.y+15,kin?96:130,e.hp/e.maxHp,'#e8708f');
   if(e.rootUntil>b.time)pill(`血海拘束 ${(e.rootUntil-b.time).toFixed(1)}s`,at(e.x,e.y,212),'#f3a4cd',11);
   if(e.attack)pill(`${e.attack.type==='slam'?'血潮の墜落':'薙ぎ払い'} ${(e.attack.duration-e.attack.age).toFixed(1)}s`,e.attack.type==='slam'?at(e.attack.x,e.attack.y+e.attack.range,10):at(e.x-100,e.y,10),'#ffb2bd',12);
   if(b.joust){const s=b.ship('lance');pill(`ジョスト · 速度${Math.round(b.joust.speed)}`,at(s.x,s.y,142),'#ffe0a0',12);}

@@ -1,7 +1,8 @@
 // 戦略マップの3Dモデル一覧。scene3d.mjs と同じ {solid, transparent} を返す純粋関数（艦隊の向きだけ前回値を WeakMap に覚える）。
 import {model,multiply,segmentMatrix,TAU,clamp} from './space3d.mjs';
 import {MAP,LAMP,SHOALS,ISLETS,CONTACT} from './strategy.mjs';
-import {KNIGHTS,ESCORT} from './battle.mjs';
+import {KNIGHTS,ESCORT,SWARM_KINDS} from './battle.mjs';
+import {monster} from './scene3d.mjs';
 // 戦略マップの座標（3000×2000）は 0.4 倍して中心を原点に置く。論理座標の y は 3D の z に対応する。
 export const MAP_SCALE=.4;
 export const mapWorld=(x,y,h=0)=>[(x-MAP.w/2)*MAP_SCALE,h,(y-MAP.h/2)*MAP_SCALE];
@@ -59,12 +60,13 @@ export function buildMapScene(st,{selected=null,now=0}={}){
    for(let i=0;i<num;i+=2){const a=i/num,z2=(i+1)/num;line([wx+(tx-wx)*a,4,wz+(tz-wz)*a],[wx+(tx-wx)*z2,4,wz+(tz-wz)*z2],1.2,[...col,.85],.5)}
    ring(f.target.x,f.target.y,30,[...col,.9],4,.5);ring(f.target.x,f.target.y,14,[...col,.9],4,.5)}
  }
- // 敵：ネフェリムは巨人、眷属の群れは小さく暗い巨人の三つ組。向きは目的地へ。
+ // 敵：ネフェリムは巨人、眷属の群れは2〜4体の小さな怪物（海蛇・甲殻の獣・触手のある魚）。体力が減ると数が減る。向きは目的地へ。
  for(const e of st.enemies){
   if(!e.active)continue;
   const nep=e.kind==='nephilim',goal=st.goal(e),ang=Math.atan2(goal.y-e.y,goal.x-e.x),[wx,,wz]=mapWorld(e.x,e.y);
-  const hide=nep?[.18,.27,.34,1]:[.12,.19,.24,1],spots=nep?[[0,0,.45]]:[[0,0,.27],[-24,-32,.2],[-22,34,.2]];
+  const hide=[.18,.27,.34,1],spots=nep?[[0,0,.45]]:[];
   item('disc',[wx,1.6,wz],[(nep?46:56),1,(nep?40:50)],[.005,.015,.03,.32]);
+  if(!nep){const n=clamp(Math.ceil(e.hp/e.maxHp*SWARM_KINDS.length-1e-9),2,SWARM_KINDS.length);for(let i=0;i<n;i++){const w=(i%2?-1:1)*(.5+.1*i),a=now*w+i*TAU/n,R=26+7*(i%2),gm=model([wx+Math.cos(a)*R,0,wz+Math.sin(a)*R*.8],[.8,.8,.8],a+(w>0?1:-1)*Math.PI/2);monster(SWARM_KINDS[i],now*1.2+i*1.7,{draw,local,limb},gm,false,i===3?7:9)}}
   for(const [dx,dz,k] of spots){
    const c=Math.cos(ang),n=Math.sin(ang),g=model([wx+dx*c-dz*n,0,wz+dx*n+dz*c],[k,k,k],ang);
    local(g,'sphere',[-10,38,0],[65,68,57],hide);local(g,'sphere',[0,98,0],[45,61,64],hide);local(g,'sphere',[20,139,0],[32,39,36],hide);local(g,'sphere',[40,127,0],[27,16,26],[.12,.15,.21,1]);
