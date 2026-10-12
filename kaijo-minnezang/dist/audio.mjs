@@ -4,17 +4,24 @@ const hz=m=>440*2**((m-69)/12);
 // 曲定義：beats=ループ長（拍）、bpm、at(拍番号, 開始時刻, 1拍の秒数, 出力) がその拍のノートを予約する。
 const CH={ // 和音（ミディ番号）
  Dm:[50,53,57],Bb:[46,50,53],F:[53,57,60],Gm:[43,46,50],A:[45,49,52],Am:[57,60,64],Fw:[57,60,65],Dmw:[57,62,65],E:[56,59,64],C:[48,52,55],G:[55,59,62]};
-const MARCH={bpm:104,beats:32,root:[38,38,34,41,43,38,45,38],pad:['Dm','Dm','Bb','F','Gm','Dm','A','Dm'],
- mel:[[69,0,65,69],[74,72,69,0],[70,0,67,70],[72,69,65,0],[67,70,74,70],[69,65,62,65],[64,67,69,73],[74,74,74,0]]};
+// マーチ：変ロ長調・16小節。ホルンの旋律（2本のユニゾン＋1オクターブ下）、ホルンの後打ち（2・4拍目の和音）、チューバ風の低音（1・3拍目に根音と5度）、大太鼓・小太鼓・シンバル。
+const MCH={B:[58,62,65],E:[58,63,67],G:[58,62,67],C:[60,63,67],F:[57,60,65]},MROOT={B:[46,41],E:[39,46],G:[43,38],C:[48,43],F:[41,36]};
+const MARCH={bpm:116,beats:64,ch:'BBEBGCFFBBECBFBB',
+ mel:[[[0,65,.75],[.75,65,.25],[1,70,1],[2,74,1],[3,77,1]],[[0,77,1.5],[1.5,74,.5],[2,70,2]],[[0,75,.75],[.75,75,.25],[1,79,1],[2,77,1],[3,75,1]],[[0,74,3],[3,70,1]],
+  [[0,74,.75],[.75,72,.25],[1,70,1],[2,67,1],[3,70,1]],[[0,72,.75],[.75,70,.25],[1,67,1],[2,63,1],[3,67,1]],[[0,69,1],[1,72,1],[2,77,1],[3,75,1]],[[0,74,1],[1,72,1],[2,65,1.5],[3.5,65,.5]],
+  [[0,65,.75],[.75,65,.25],[1,70,1],[2,74,1],[3,77,1]],[[0,77,1],[1,79,1],[2,82,2]],[[0,79,1.5],[1.5,77,.5],[2,75,1],[3,79,1]],[[0,79,.75],[.75,77,.25],[1,75,1],[2,72,2]],
+  [[0,74,1],[1,77,1],[2,82,1.5],[3.5,77,.5]],[[0,81,1.5],[1.5,79,.5],[2,77,1],[3,72,1]],[[0,74,.75],[.75,74,.25],[1,77,.75],[1.75,77,.25],[2,82,2]],[[0,82,1],[1,70,1]]]};
 const WALTZ={bpm:144,beats:24,root:[45,41,38,40,45,41,40,45],ch:[CH.Am,CH.Fw,CH.Dmw,CH.E,CH.Am,CH.Fw,CH.E,CH.Am],
  mel:[[[0,76,2],[2,74,1]],[[0,72,2],[2,69,1]],[[0,74,2],[2,77,1]],[[0,76,1.5],[1.5,71,.5],[2,68,1]],[[0,76,2],[2,81,1]],[[0,79,2],[2,77,1]],[[0,76,1],[1,71,1],[2,68,1]],[[0,69,3]]]};
 const DRAMA={bpm:66,beats:32,ch:['Am','Fw','C','G','Am','Dmw','E','Am'].map(k=>CH[k]),arp:[0,1,2,1,2,1,0,1]};
 const SONGS={
- march:{bpm:MARCH.bpm,beats:MARCH.beats,at(i,t,s,o,A){const bar=i>>2|0,n=i%4,r=MARCH.root[bar%8];
-  if(n===0)for(const m of CH[MARCH.pad[bar%8]])A.tone('sawtooth',hz(m+12),t,s*3.8,.05,{o,attack:.12,lp:900});
-  A.tone('triangle',hz(n%2?r+7:r),t,s*.8,.2,{o,attack:.02,lp:500});
-  if(n%2===0)A.tone('sine',90,t,.18,.35,{o,sweep:45});else A.noise(t,.12,.08,{o,type:'bandpass',freq:1800,q:.8});
-  const m=MARCH.mel[bar%8][n];if(m)A.tone('sawtooth',hz(m),t,s*.9,.11,{o,attack:.07,lp:1500,detune:6});}},
+ march:{bpm:MARCH.bpm,beats:MARCH.beats,at(i,t,s,o,A){const bar=i>>2,n=i%4,k=MARCH.ch[bar],last=bar===15;
+  for(const [b,m,len] of MARCH.mel[bar])if(b>=n&&b<n+1){const at=t+(b-n)*s,d=s*len*.92;A.brass(hz(m),at,d,.075,{o});A.brass(hz(m-12),at,d,.04,{o,bright:.6})}
+  if(n%2===0){A.brass(hz(MROOT[k][n/2]),t,s*.55,.11,{o,bright:.45,attack:.03});A.tone('sine',72,t,.22,.42,{o,sweep:42,decay:true})}
+  else if(!(last&&n===3)){for(const m of MCH[k])A.brass(hz(m),t,s*.38,.03,{o,bright:.8,attack:.02});A.noise(t,.13,.12,{o,type:'bandpass',freq:2200,q:.7})}
+  // 4・8・16小節の最後の拍は小太鼓のロール、1・9小節の頭はシンバル。
+  if(n===3&&(bar===3||bar===7||last))for(let r=0;r<6;r++)A.noise(t+r*s/6,.07,.05+r*.012,{o,type:'bandpass',freq:2400,q:.7});
+  if(n===0&&(bar===0||bar===8))A.noise(t,.9,.07,{o,type:'highpass',freq:6000});}},
  waltz:{bpm:WALTZ.bpm,beats:WALTZ.beats,at:(i,t,s,o,A)=>waltz(i,t,s,o,A,0)},
  waltz2:{bpm:WALTZ.bpm*1.15,beats:WALTZ.beats,at:(i,t,s,o,A)=>waltz(i,t,s,o,A,2)},
  drama:{bpm:DRAMA.bpm,beats:DRAMA.beats,at(i,t,s,o,A){const bar=i>>2|0,ch=DRAMA.ch[bar%8];
@@ -37,7 +44,13 @@ export function createAudio(){
   o.start(t);o.stop(t+dur+.2)}
  function noise(t,dur,vol,p={}){const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();s.buffer=noiseBuf;f.type=p.type||'lowpass';f.frequency.setValueAtTime(p.freq||800,t);if(p.sweep)f.frequency.exponentialRampToValueAtTime(p.sweep,t+dur);f.Q.value=p.q||1;
   s.connect(f);f.connect(g);g.connect(p.o||bus.sfx);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+(p.attack||.005));g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.start(t,Math.random()*1.5);s.stop(t+dur+.05)}
- const A={tone,noise};
+ // ホルン風の金管：わずかにずらした鋸歯状波2本を、吹き始めに開くローパスに通し、長い音にだけ遅れてビブラートを掛ける。
+ function brass(f,t,dur,vol,p={}){const g=ctx.createGain(),l=ctx.createBiquadFilter(),v=ctx.createOscillator(),vd=ctx.createGain(),b=p.bright||1,a=p.attack||.045;
+  l.type='lowpass';l.Q.value=1.1;l.frequency.setValueAtTime(f*1.1,t);l.frequency.linearRampToValueAtTime(Math.min(4200,f*4.2*b),t+.06);l.frequency.exponentialRampToValueAtTime(Math.min(3000,f*2.6*b),t+.25);
+  v.frequency.value=5.2;vd.gain.setValueAtTime(0,t);vd.gain.linearRampToValueAtTime(dur>.5?f*.006:0,t+Math.min(dur,.45));v.connect(vd);
+  for(const d of [-6,5]){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=d;vd.connect(o.frequency);o.connect(l);o.start(t);o.stop(t+dur+.2)}
+  l.connect(g);g.connect(p.o||bus.music);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+a);g.gain.linearRampToValueAtTime(vol*.8,t+a+.1);g.gain.setValueAtTime(vol*.8,t+Math.max(a+.1,dur*.85));g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(a+.12,dur)+.12);v.start(t);v.stop(t+dur+.2)}
+ const A={tone,noise,brass};
  function ambient(){ // 海のうねりと風：フィルタしたノイズを低周波で揺らす
   for(const [type,freq,q,gain,rate] of [['lowpass',420,.7,.5,.09],['bandpass',900,.9,.18,.05]]){const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain(),l=ctx.createOscillator(),d=ctx.createGain();s.buffer=noiseBuf;s.loop=true;f.type=type;f.frequency.value=freq;f.Q.value=q;g.gain.value=gain*.6;
    l.frequency.value=rate;d.gain.value=gain*.4;l.connect(d);d.connect(g.gain);s.connect(f);f.connect(g);g.connect(bus.env);s.start();l.start()}}
