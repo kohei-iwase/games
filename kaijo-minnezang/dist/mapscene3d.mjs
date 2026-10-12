@@ -38,7 +38,7 @@ export function buildMapScene(st,{selected=null,now=0}={}){
  const ss=.45;
  for(const f of st.fleets){
   const col=hex(FLEET_COLOR[f.id]||'#d23a54'),ships=f.ships.filter(s=>s.hp>0);
-  if(f.target){const a=Math.atan2(f.target.y-f.y,f.target.x-f.x);if(Number.isFinite(a))headings.set(f,a)}
+  if(f.target){const w=f.path?.[0]||f.target,a=Math.atan2(w.y-f.y,w.x-f.x);if(Number.isFinite(a))headings.set(f,a)}
   const ang=headings.get(f)??0,c=Math.cos(ang),n=Math.sin(ang),sel=f.id===selected;
   ships.forEach((s,i)=>{
    const off=(i-(ships.length-1)/2)*-52,side=(i%2?1:-1)*(ships.length>1?9:0),px=off*c-side*n,pz=off*n+side*c,[wx,,wz]=mapWorld(f.x,f.y);
@@ -56,9 +56,11 @@ export function buildMapScene(st,{selected=null,now=0}={}){
   const [wx,,wz]=mapWorld(f.x,f.y);
   ring(f.x,f.y,sel?72:60,sel?[.91,.77,.40,.92]:[...col,.4],3,sel?.6:.3);if(sel)ring(f.x,f.y,66,[.91,.77,.40,.5],3,.4);
   if(f.target){
-   const [tx,,tz]=mapWorld(f.target.x,f.target.y),len=Math.hypot(tx-wx,tz-wz),num=clamp(Math.round(len/9),2,90);
-   for(let i=0;i<num;i+=2){const a=i/num,z2=(i+1)/num;line([wx+(tx-wx)*a,4,wz+(tz-wz)*a],[wx+(tx-wx)*z2,4,wz+(tz-wz)*z2],1.2,[...col,.85],.5)}
-   ring(f.target.x,f.target.y,30,[...col,.9],4,.5);ring(f.target.x,f.target.y,14,[...col,.9],4,.5)}
+   // 移動先への折れ線（経路 f.path。なければ直線）。追跡中は終点が敵の位置で、二重の輪を敵の周りに出す。
+   const pts=[[wx,wz],...(f.path?.length?f.path:[f.target]).map(p=>{const q=mapWorld(p.x,p.y);return [q[0],q[2]]})];
+   for(let k=1;k<pts.length;k++){const [ax,az]=pts[k-1],[bx,bz]=pts[k],len=Math.hypot(bx-ax,bz-az),num=clamp(Math.round(len/9),2,90);
+    for(let i=0;i<num;i+=2){const a=i/num,z2=(i+1)/num;line([ax+(bx-ax)*a,4,az+(bz-az)*a],[ax+(bx-ax)*z2,4,az+(bz-az)*z2],1.2,[...col,.85],.5)}}
+   const chase=f.target.enemyId;ring(f.target.x,f.target.y,chase?(st.enemy(chase)?.kind==='nephilim'?80:56):30,[...col,.9],4,.5);ring(f.target.x,f.target.y,chase?64:14,[...col,.9],4,.5)}
  }
  // 敵：ネフェリムは巨人、眷属の群れは2〜4体の小さな怪物（海蛇・甲殻の獣・触手のある魚）。体力が減ると数が減る。向きは目的地へ。
  for(const e of st.enemies){
