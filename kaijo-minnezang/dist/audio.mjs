@@ -34,8 +34,8 @@ function waltz(i,t,s,o,A,up){const bar=i/3|0,n=i%3,r=WALTZ.root[bar%8]+up;
  for(const [b,m,len] of WALTZ.mel[bar%8])if(b>=n&&b<n+1){for(const d of [-7,7])A.tone('sawtooth',hz(m+up),t+(b-n)*s,s*len,.055,{o,attack:.18,lp:1800,detune:d});}}
 export function createAudio(){
  const AC=typeof window!=='undefined'&&(window.AudioContext||window.webkitAudioContext);
- if(!AC)return {unlock(){},setEnabled(){},setVolume(){},sfx(){},music(){},duck(){},suspend(){}};
- let ctx=null,master,bus={},noiseBuf,enabled=true,volume=.7,ducked=false,want=null,cur=null,timer=0,last={};
+ if(!AC)return {unlock(){},setEnabled(){},setVolume(){},sfx(){},air(){},music(){},duck(){},suspend(){}};
+ let ctx=null,master,bus={},noiseBuf,enabled=true,volume=.7,ducked=false,want=null,cur=null,timer=0,last={},airWant=null,airCur=null;
  const out=()=>ctx&&enabled;
  function tone(type,f,t,dur,vol,p={}){const o=ctx.createOscillator(),g=ctx.createGain();let n=o;o.type=type;o.frequency.setValueAtTime(f,t);if(p.sweep)o.frequency.exponentialRampToValueAtTime(p.sweep,t+dur);if(p.detune)o.detune.value=p.detune;
   if(p.lp){const l=ctx.createBiquadFilter();l.type='lowpass';l.frequency.value=p.lp;o.connect(l);n=l}
@@ -69,20 +69,42 @@ export function createAudio(){
   heart(t){tone('sine',62,t,.2,.5,{sweep:40,decay:true});tone('sine',55,t+.23,.22,.35,{sweep:36,decay:true})},
   cutin(t){[1800,2700,4200].forEach((f,i)=>tone('triangle',f,t+i*.04,.5,.07,{decay:true}));noise(t,.18,.1,{type:'highpass',freq:3000,sweep:9000})},
   ui(t){tone('sine',900,t,.05,.05,{sweep:600,decay:true})},
-  // 会話の動きに添えるコミカルな短い音（台詞のじゃまにならない音量）
-  'm-hop'(t){tone('sine',380,t,.16,.07,{sweep:1000,decay:true});tone('sine',620,t+.17,.08,.04,{sweep:420,decay:true})},
-  'm-sway'(t){const o=ctx.createOscillator(),l=ctx.createOscillator(),d=ctx.createGain(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(520,t);o.frequency.exponentialRampToValueAtTime(380,t+.35);l.frequency.value=14;d.gain.value=40;l.connect(d);d.connect(o.frequency);o.connect(g);g.connect(bus.sfx);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.06,t+.04);g.gain.exponentialRampToValueAtTime(.0001,t+.35);o.start(t);l.start(t);o.stop(t+.4);l.stop(t+.4)},
-  'm-recoil'(t){noise(t,.14,.08,{type:'bandpass',freq:2600,sweep:700,q:.8});tone('triangle',420,t,.22,.06,{sweep:150,decay:true})},
-  'm-lunge'(t){noise(t,.2,.09,{type:'bandpass',freq:500,sweep:4200,q:1.4,attack:.1})},
-  'm-tremble'(t){const o=ctx.createOscillator(),l=ctx.createOscillator(),d=ctx.createGain(),g=ctx.createGain();o.type='triangle';o.frequency.value=680;l.frequency.value=26;d.gain.value=.04;l.connect(d);d.connect(g.gain);o.connect(g);g.connect(bus.sfx);g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+.34);o.start(t);l.start(t);o.stop(t+.36);l.stop(t+.36)},
-  'm-nod'(t){tone('sine',1040,t,.1,.07,{sweep:700,decay:true});tone('sine',2080,t,.05,.025,{decay:true})}};
+  // 会話の動きに添える、可愛らしい短い音（台詞のじゃまにならない小さな音量）
+  'm-hop'(t){tone('sine',520,t,.08,.06,{sweep:780,decay:true});tone('sine',780,t+.09,.1,.06,{sweep:1040,decay:true});tone('sine',2080,t+.09,.18,.014,{decay:true})}, // ぴょこっ
+  'm-sway'(t){tone('sine',330,t,.22,.05,{sweep:460,decay:true,attack:.08,lp:1200});tone('sine',460,t+.2,.26,.045,{sweep:340,decay:true,attack:.06,lp:1200})}, // ふわっ
+  'm-recoil'(t){tone('sine',1500,t,.12,.06,{sweep:700,decay:true});tone('triangle',2100,t,.08,.022,{sweep:1100,decay:true})}, // ぴゃっ
+  'm-lunge'(t){noise(t,.12,.05,{type:'highpass',freq:2500,sweep:7000,q:.8,attack:.06});tone('sine',900,t+.07,.07,.04,{sweep:1500,decay:true})}, // しゅぴっ
+  'm-tremble'(t){const o=ctx.createOscillator(),l=ctx.createOscillator(),d=ctx.createGain(),g=ctx.createGain();o.type='sine';o.frequency.value=880;l.frequency.value=18;d.gain.value=.03;l.connect(d);d.connect(g.gain);o.connect(g);g.connect(bus.sfx);g.gain.setValueAtTime(.04,t);g.gain.exponentialRampToValueAtTime(.0001,t+.36);o.start(t);l.start(t);o.stop(t+.38);l.stop(t+.38)}, // ぷるぷる
+  'm-nod'(t){tone('sine',330,t,.09,.09,{sweep:220,decay:true});tone('triangle',660,t,.04,.03,{decay:true});noise(t,.03,.04,{type:'bandpass',freq:1200,q:1})}, // ぽこっ（木の実）
+  // 吹き出しの記号に添える音
+  'sym-note'(t){[2093,2637,3136].forEach((f,i)=>tone('sine',f,t+i*.06,.16,.04,{decay:true}))}, // きらっ
+  'sym-surprise'(t){tone('sine',700,t,.07,.06,{sweep:1400,decay:true});tone('sine',1500,t+.08,.08,.05,{decay:true})}, // ぴこっ
+  'sym-sweat'(t){tone('sine',900,t,.12,.07,{sweep:380,decay:true})}, // ぽたっ
+  'sym-dots'(t){[.15,.4,.65].forEach(d=>tone('sine',520,t+d,.1,.045,{decay:true}))}, // ぽ・ぽ・ぽ
+  'sym-anger'(t){tone('triangle',320,t,.12,.06,{sweep:200,decay:true});tone('triangle',260,t+.1,.1,.05,{sweep:170,decay:true})},
+  'sym-shy'(t){tone('sine',880,t,.1,.04,{decay:true});tone('sine',1175,t+.09,.16,.04,{decay:true})},
+  'sym-proud'(t){tone('sine',1568,t,.3,.04,{decay:true});tone('sine',2093,t+.07,.3,.035,{decay:true})},
+  rumble(t){noise(t,1.2,.5,{freq:140,sweep:60,attack:.15,o:airCur?.g});tone('sine',48,t,.9,.3,{sweep:30,decay:true,o:airCur?.g})}}; // 地鳴りの揺れに合わせた低い響き
+ // 会話の環境音（@空気）。bus.air に鳴らして、会話が終わるか @空気 なし で止める。音量設定・ミュートは master に従う。
+ function loopNoise(g,type,freq,q,gain,rate){const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),v=ctx.createGain(),l=ctx.createOscillator(),d=ctx.createGain();s.buffer=noiseBuf;s.loop=true;f.type=type;f.frequency.value=freq;f.Q.value=q;v.gain.value=gain*.6;l.frequency.value=rate;d.gain.value=gain*.4;l.connect(d);d.connect(v.gain);s.connect(f);f.connect(v);v.connect(g);s.start(t0(),Math.random());l.start();return [s,l]}
+ const t0=()=>ctx.currentTime;
+ const AIRS={
+  sea:g=>({nodes:[...loopNoise(g,'lowpass',520,.7,.55,.12),...loopNoise(g,'bandpass',1400,.8,.22,.07),...loopNoise(g,'highpass',4000,.5,.05,.21)]}), // 波と風と飛沫
+  harbor:g=>{const nodes=loopNoise(g,'lowpass',380,.7,.3,.08),k=()=>{if(!ctx||ctx.state!=='running')return;const t=t0()+.05;for(const d of [0,.46])tone('sine',540-d*60,t+d,.13,.05,{sweep:380,decay:true,lp:1700,o:g});noise(t,.05,.02,{type:'bandpass',freq:900,q:1,o:g})};return {nodes,timer:setInterval(k,3600),first:setTimeout(k,900)}}, // 遠い槌音と小さな波音
+  rumble:g=>{const nodes=[...loopNoise(g,'lowpass',90,.8,1.1,.14),...loopNoise(g,'bandpass',260,1.2,.12,.05)],o=ctx.createOscillator(),v=ctx.createGain(),l=ctx.createOscillator(),d=ctx.createGain();o.type='sine';o.frequency.value=41;v.gain.value=.16;l.frequency.value=.2;d.gain.value=.08;l.connect(d);d.connect(v.gain);o.connect(v);v.connect(g);o.start();l.start();nodes.push(o,l);
+   const k=()=>{if(!ctx||ctx.state!=='running'||Math.random()<.35)return;tone('sine',1800+Math.random()*900,t0()+.02,.1,.025,{sweep:900,decay:true,o:g})};return {nodes,timer:setInterval(k,900)}} // 低い地鳴りと、時々したたる水滴
+ };
+ function airStop(){if(!airCur)return;const c=airCur;airCur=null;clearInterval(c.timer);clearTimeout(c.first);const n=t0();c.g.gain.cancelScheduledValues(n);c.g.gain.setValueAtTime(c.g.gain.value,n);c.g.gain.linearRampToValueAtTime(0,n+.8);setTimeout(()=>{for(const x of c.nodes){try{x.stop()}catch{}}c.g.disconnect()},1000)}
+ function airStart(){airStop();if(!ctx||!airWant||!AIRS[airWant])return;const g=ctx.createGain(),n=t0();g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(1,n+1.2);g.connect(bus.air);airCur={g,...AIRS[airWant](g)}}
+;
  return {
-  unlock(){if(ctx){if(ctx.state==='suspended'&&!document.hidden)ctx.resume();return}try{ctx=new AC();master=ctx.createGain();master.connect(ctx.destination);for(const k of ['music','sfx','env']){bus[k]=ctx.createGain();bus[k].connect(master)}bus.env.gain.value=.3;bus.sfx.gain.value=.8;
+  unlock(){if(ctx){if(ctx.state==='suspended'&&!document.hidden)ctx.resume();return}try{ctx=new AC();master=ctx.createGain();master.connect(ctx.destination);for(const k of ['music','sfx','env','air']){bus[k]=ctx.createGain();bus[k].connect(master)}bus.env.gain.value=.3;bus.air.gain.value=.6;bus.sfx.gain.value=.8;
    noiseBuf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-   master.gain.value=0;ambient();apply();if(ctx.state==='suspended')ctx.resume();startMusic();timer=setInterval(tick,120)}catch{ctx=null}},
+   master.gain.value=0;ambient();apply();if(ctx.state==='suspended')ctx.resume();startMusic();airStart();timer=setInterval(tick,120)}catch{ctx=null}},
   setEnabled(v){enabled=!!v;apply()},
   setVolume(v){volume=Math.min(1,Math.max(0,+v||0));apply()},
   sfx(name){if(!out()||!SFX[name])return;try{SFX[name](ctx.currentTime+.01)}catch{}},
+  air(name){name=name&&AIRS[name]?name:null;if(name===airWant)return;airWant=name;if(ctx)airStart()},
   music(name){name=name&&SONGS[name]?name:null;if(name===want)return;want=name;if(ctx)startMusic()},
   duck(v){ducked=!!v;apply()},
   suspend(v){if(!ctx)return;if(v)ctx.suspend();else ctx.resume()}}}
