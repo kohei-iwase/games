@@ -1,7 +1,7 @@
 import {meshes,normalMatrix,cameraState,cameraFrom,shipCamera,project,groundPoint,world,clamp} from './space3d.mjs';
 import {vertexShader,fragmentShader} from './shaders3d.mjs';
 import {buildScene,bloodTexture,shipPose} from './scene3d.mjs';
-import {FLAGSHIP,swarmAlive,SWARM} from './battle.mjs';
+import {FLAGSHIP,swarmAlive,SWARM,fullName} from './battle.mjs';
 import {buildMapScene,mapWorld,mapFromGround,shipMaxHp,FLEET_COLOR} from './mapscene3d.mjs';
 import {MAP,LAMP} from './strategy.mjs';
 const VIEW_PITCH={rear:.32,first:-.08,overview:0};
@@ -57,7 +57,7 @@ export class SeaRenderer {
   // 頭上の体力バー（金の細縁・残り3割で赤）。
   const bar=(x,y,bw,r,col)=>{r=clamp(r,0,1);c.fillStyle='#0a0612e8';c.fillRect(x-bw/2-1,y-2,bw+2,7);c.fillStyle=r<.3?'#f77d99':col;c.fillRect(x-bw/2,y-1,bw*r,5);c.strokeStyle='#e2c07a99';c.lineWidth=1;c.strokeRect(x-bw/2-.5,y-2.5,bw+1,6)};
   const pill=(text,p,color,size=12)=>{if(!p||p.depth>1||p.x<-100||p.x>w+100||p.y<0||p.y>h)return;c.font=`500 ${size}px system-ui,sans-serif`;const bw=c.measureText(text).width+18;c.fillStyle='#06121dea';c.fillRect(p.x-bw/2,p.y-12,bw,24);c.fillStyle=color;c.fillText(text,p.x,p.y);};
-  for(const s of b.ships){if(this.view==='first'&&s===this.followed(b))continue;const po=shipPose(b,s),p=at(po.x,po.y,113);if(!p||p.depth>1)continue;p.x=clamp(p.x,65,w-65);p.y=clamp(p.y,45,h-40);pill(`${s.name} · 血${Math.floor(s.blood)}`,p,s.hp>0?s.color:'#9ba2a7',selected===s.id?13:11);bar(p.x,p.y+15,84,s.hp/s.maxHp,s.color);if(b.protected(s))pill('防護 · 押し戻し無効',{x:p.x,y:p.y+35,depth:0},'#aed6ff',10);}
+  for(const s of b.ships){if(this.view==='first'&&s===this.followed(b))continue;const po=shipPose(b,s),p=at(po.x,po.y,113);if(!p||p.depth>1)continue;p.x=clamp(p.x,65,w-65);p.y=clamp(p.y,45,h-40);pill(`${fullName(s)} · 血${Math.floor(s.blood)}`,p,s.hp>0?s.color:'#9ba2a7',selected===s.id?13:11);bar(p.x,p.y+15,84,s.hp/s.maxHp,s.color);if(s.bash||s.barrage)pill(s.bash?'バッシュ！':'バラージ！',{x:p.x,y:p.y+35,depth:0},s.bash?'#aed6ff':'#f0b27c',10);}
   const e=b.enemy,kin=b.enemyKind==='kin',ep=at(e.x,e.y,kin?96:240);pill(e.hp<=0?`${b.enemyName}撃破`:kin?`${b.enemyName} ×${swarmAlive(e)}/${SWARM}`:e.form===2?`${b.enemyName} · 第二形態`:b.enemyName,ep,'#f2b0bf',13);if(ep&&ep.depth<=1&&e.hp>0)bar(ep.x,ep.y+15,kin?96:130,e.hp/e.maxHp,'#e8708f');
   if(e.rootUntil>b.time)pill(`血海拘束 ${(e.rootUntil-b.time).toFixed(1)}s`,at(e.x,e.y,212),'#f3a4cd',11);
   if(e.attack)pill(`${e.attack.type==='slam'?'血潮の墜落':'薙ぎ払い'} ${(e.attack.duration-e.attack.age).toFixed(1)}s`,e.attack.type==='slam'?at(e.attack.x,e.attack.y+e.attack.range,10):at(e.x-100,e.y,10),'#ffb2bd',12);

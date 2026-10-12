@@ -28,6 +28,8 @@ slam.enemyImpact(slam.enemy.attack);for(const age of [0,.45,.89]){slam.effects.f
  for(const dmg of [110,110,110]){k.hitEnemy(dmg,'stake',k.ship('stake'));for(const age of [0,.5,1.2]){k.effects.forEach(f=>f.age=Math.min(f.age,age));ok(buildScene(k))}}
  k.after+=2;assert.equal(eyes(buildScene(k)),2*swarmAlive(k.enemy),'eyes follow the living monsters');assert(swarmAlive(k.enemy)<4);
  k.hitEnemy(1e4,'stake',k.ship('stake'));assert.equal(k.mode,'ended');for(let i=0;i<60;i++){k.advancePresentation(.05);ok(buildScene(k))}assert.equal(eyes(buildScene(k)),0,'all sunk');
+ // バッシュ（盾の衝撃・よろめきの輪）、バラージ（杭と砲弾の弾幕）、3種類の名前なしの艦：全モデルが有限値。
+ {const q=new Battle({fleet:['stake','guard','escort:retinue','escort:hunter','escort:executor'],auto:true,island:false});q.addPool();q.start();q.enemy.nextAttack=999;q.ships.forEach((x,i)=>{x.x=q.enemy.x-260;x.y=q.enemy.y+(i-2)*50});q.activateSkills(['stake','guard']);let sawBash=false,sawShots=false;for(let i=0;i<160;i++){q.step(.025);if(i%4===0){ok(buildScene(q));sawShots=sawShots||q.shots.some(p=>p.kind==='barrage');sawBash=sawBash||q.effects.some(f=>f.type==='bash')||q.time<q.enemy.staggerUntil}}assert(sawShots&&sawBash);for(const age of [0,.3,.8])q.effects.filter(f=>f.type==='bash').forEach(f=>{f.age=age;ok(buildScene(q))})}
  const n=new Battle({auto:true});n.start();n.hitEnemy(1e5,'stake',n.ship('stake'));for(let i=0;i<40;i++){n.advancePresentation(.05);ok(buildScene(n))}}
 for(const g of Object.values(meshes)){assert.equal(g.vertices.length,g.normals.length);assert.equal(g.vertices.length%9,0);assert(g.vertices.every(Number.isFinite));}
 // 戦略マップ：全モデルが有限値で、法線行列が逆行列を持つ。艦隊の選択・移動先・敵の出現・島の包囲の各状態を含める。

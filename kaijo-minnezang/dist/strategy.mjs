@@ -1,5 +1,5 @@
 // 戦略マップのルール。DOM非依存・決定的（乱数なし）。戦闘は battle.mjs に受け渡し、結果を applyBattle で反映する。
-import {KNIGHTS,ESCORT,SKILLS,predict} from './battle.mjs';
+import {shipSpec,SKILLS,predict} from './battle.mjs';
 export const MAP={w:3000,h:2000};
 // 守る島。補給地を兼ねる。
 export const LAMP={x:200,y:1000,r:90,name:'峰の灯'};
@@ -10,7 +10,7 @@ export const ISLETS=[{x:1100,y:600,r:70},{x:2100,y:1150,r:90}];
 export const FLEET_SPEED=60, CONTACT=70, PUSH=220, GRACE=4;
 const SHOAL_SLOW={nephilim:.35,kin:.7}, SIEGE_DAMAGE={nephilim:3,kin:1.5}, MARGIN=24;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-const maxHpOf=type=>(type==='escort'?ESCORT:KNIGHTS[type]).maxHp;
+const maxHpOf=type=>shipSpec(type).maxHp;
 const ship=type=>({type,hp:maxHpOf(type)});
 // 小島の中なら外へ出す。
 function pushOut(p){for(const o of ISLETS){const d=dist(p,o);if(d<o.r+MARGIN){const a=d>1e-6?Math.atan2(p.y-o.y,p.x-o.x):Math.PI;p.x=o.x+Math.cos(a)*(o.r+MARGIN);p.y=o.y+Math.sin(a)*(o.r+MARGIN)}}return p}
@@ -33,15 +33,15 @@ function route(from,to){
   for(let v=0;v<n;v++)if(!done[v]){const w=d[u]+dist(nodes[u],nodes[v]);if(w<d[v]-1e-9&&clear(nodes[u],nodes[v])){d[v]=w;prev[v]=u}}}
  if(prev[1]<0)return [{x:to.x,y:to.y}];
  const out=[];for(let i=1;i>0;i=prev[i])out.unshift({x:nodes[i].x,y:nodes[i].y});return out}
-// 艦隊の艦に戦闘内の艦idを振る（騎士は種類名、随伴艦は escort1,escort2…）。
-function battleIds(f){let n=0;return f.ships.map(s=>s.type==='escort'?'escort'+ ++n:s.type)}
+// 艦隊の艦に戦闘内の艦idを振る（騎士は種類名、名前のない艦は種類を問わず escort1,escort2…）。
+function battleIds(f){let n=0;return f.ships.map(s=>s.type.startsWith('escort')?'escort'+ ++n:s.type)}
 export class Strategy{
  constructor(){
   this.time=0;this.paused=true;this.result=null;this.reason='';this.lamp={hp:100};this.log=[];this.encounter=null;this.battles=0;this.cooldowns={};
   this.seen={};// 再生済みの物語の場面（contact／interlude）。
   this.fleets=[
-   {id:'main',name:'主力艦隊',ships:['lance','stake','escort'].map(ship),x:520,y:950,target:null,path:null,repath:0,formation:'free',skillOrder:['stake','lance']},
-   {id:'detached',name:'別働隊',ships:['guard','escort','escort'].map(ship),x:520,y:1250,target:null,path:null,repath:0,formation:'free',skillOrder:['guard']}];
+   {id:'main',name:'主力艦隊',ships:['lance','guard'].map(ship),x:520,y:950,target:null,path:null,repath:0,formation:'free',skillOrder:['guard','lance']},
+   {id:'detached',name:'別働隊',ships:['stake','escort:retinue','escort:hunter'].map(ship),x:520,y:1250,target:null,path:null,repath:0,formation:'free',skillOrder:['stake']}];
   const kin=(id,x,y,ai,delay=0)=>({id,kind:'kin',name:'眷属の群れ',hp:420,maxHp:420,x,y,speed:34,ai,active:!delay,delay,siege:false});
   this.enemies=[{id:'nephilim',kind:'nephilim',name:'ネフェリム',hp:2250,maxHp:2250,x:2750,y:1000,speed:22,ai:'lamp',active:true,delay:0,siege:false},
    kin('kin1',2600,500,'lamp'),kin('kin2',2550,1550,'hunt'),kin('kin3',2900,1300,'lamp',40)];
