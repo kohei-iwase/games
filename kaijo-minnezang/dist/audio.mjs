@@ -69,6 +69,7 @@ export function createAudio(){
   heart(t){tone('sine',62,t,.2,.5,{sweep:40,decay:true});tone('sine',55,t+.23,.22,.35,{sweep:36,decay:true})},
   cutin(t){[1800,2700,4200].forEach((f,i)=>tone('triangle',f,t+i*.04,.5,.07,{decay:true}));noise(t,.18,.1,{type:'highpass',freq:3000,sweep:9000})},
   ui(t){tone('sine',900,t,.05,.05,{sweep:600,decay:true})},
+  wipe(t){noise(t,.5,.09,{type:'bandpass',freq:700,sweep:3600,q:.8,attack:.14});noise(t+.42,.45,.07,{type:'bandpass',freq:3600,sweep:900,q:.8,attack:.05})}, // シュワッ（場面転換の風切り）
   // 会話の動きに添える、可愛らしい短い音（台詞のじゃまにならない小さな音量）
   'm-hop'(t){tone('sine',520,t,.08,.06,{sweep:780,decay:true});tone('sine',780,t+.09,.1,.06,{sweep:1040,decay:true});tone('sine',2080,t+.09,.18,.014,{decay:true})}, // ぴょこっ
   'm-sway'(t){tone('sine',330,t,.22,.05,{sweep:460,decay:true,attack:.08,lp:1200});tone('sine',460,t+.2,.26,.045,{sweep:340,decay:true,attack:.06,lp:1200})}, // ふわっ

@@ -391,15 +391,36 @@ body[data-talk="on"] .stage>:not(canvas):not(#talk):not(.rotate-hint):not(#rende
 .talk-namecard small{font:12px/1.4 var(--sans);color:#5b5790}
 .talk-go{align-self:flex-end;padding:9px 30px;border:1px solid #fff;border-radius:10px;background:linear-gradient(160deg,#b01a38,#5a0a1c);color:#fff;font:700 16px/1.4 var(--sans);letter-spacing:.2em;cursor:pointer}.talk-go:hover{background:linear-gradient(160deg,#cc2444,#74102a)}
 .talk-loglist p.pick span{color:#b01a38}
-@media (prefers-reduced-motion:reduce){.talk-slot.ghost .talk-fig,.talk-sym,.sym-sweat .drop,.sym-sad i,.sym-weary i{animation:none}.talk-sym{opacity:1}.talk-heading.on .talk-hband,.talk-heading.on b,.talk-heading.on small{animation-name:tHFade}.talk-hband{transform:none}}
-/* 場面の見出しカード：背景の上に、左から深紅の帯が滑り込み、大きな見出しと小さな副題を出して、約2.2秒で消える（talk.mjs が時間を管理）。 */
-.talk-heading{position:absolute;inset:0;z-index:8;pointer-events:none;display:flex;align-items:center;padding-bottom:10vh}.talk-heading[hidden]{display:none}
-.talk-hband{width:100%;padding:clamp(18px,4vh,34px) 8% clamp(18px,4vh,34px) 12%;display:flex;flex-direction:column;gap:.4em;background:linear-gradient(90deg,#5a0a1cf0,#9e1530ec 60%,#9e1530b8);border-block:3px solid #e8c47c;box-shadow:0 8px 40px #0008;transform:translateX(-101%)}
-.talk-hband b{font:900 clamp(34px,8.5vh,84px)/1.15 var(--serif);letter-spacing:.14em;color:#fff7e0;text-shadow:0 3px 12px #000a}.talk-hband small{font:700 clamp(14px,2.8vh,24px)/1.4 var(--sans);letter-spacing:.3em;color:#fbe7b6}.talk-hband small[hidden]{display:none}
-.talk-heading.on .talk-hband{animation:tHBand 2.2s cubic-bezier(.2,.8,.25,1) both}.talk-heading.on b,.talk-heading.on small{animation:tHText 2.2s ease-out both}
-@keyframes tHBand{0%{transform:translateX(-101%)}22%,86%{transform:none;opacity:1}100%{transform:none;opacity:0}}
-@keyframes tHText{0%,16%{opacity:0;transform:translateX(-26px)}34%,86%{opacity:1;transform:none}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.talk-slot.ghost .talk-fig,.talk-sym,.sym-sweat .drop,.sym-sad i,.sym-weary i{animation:none}.talk-sym{opacity:1}.talk-heading.on .talk-hband,.talk-heading.on em,.talk-heading.on b,.talk-heading.on small{animation-name:tHFade}.talk-hband{transform:none}}
+/* 場面の見出しカード：背景の上に、左から斜めに切った暗いパネル（右辺が斜め・金の細い縁）が滑り込み、札・大きな見出し・小さな副題を出して、約2.4秒で引っ込む（talk.mjs が時間を管理）。 */
+.talk-heading{position:absolute;inset:0;z-index:8;pointer-events:none}.talk-heading[hidden]{display:none}
+.talk-hband{position:absolute;left:0;top:0;bottom:0;width:min(52%,720px);background:linear-gradient(180deg,#f3d99a,#c79a42 50%,#f3d99a);clip-path:polygon(0 0,100% 0,calc(100% - 10vh) 100%,0 100%);transform:translateX(-105%)}
+.talk-hin{position:absolute;inset:0 4px 0 0;clip-path:polygon(0 0,100% 0,calc(100% - 10vh) 100%,0 100%);background:linear-gradient(100deg,#060a1cf7,#0b1332f0 72%,#0a1028e8);display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:.5em;padding:0 calc(10vh + 4%) 0 9%}
+.talk-hin em{padding:.25em 1em .2em;border-radius:4px;background:var(--tc,#9e1530);box-shadow:0 0 0 1px #ffffff55;font:700 clamp(12px,2.4vh,20px)/1.3 var(--sans);font-style:normal;letter-spacing:.3em;color:#fff}.talk-hin em[hidden]{display:none}
+.talk-hin b{font:900 clamp(30px,7.6vh,72px)/1.15 var(--serif);letter-spacing:.12em;color:#fff7e0;text-shadow:0 3px 12px #000a}.talk-hin small{font:700 clamp(13px,2.6vh,22px)/1.4 var(--sans);letter-spacing:.24em;color:#e8c47c}.talk-hin small[hidden]{display:none}
+.talk-heading.on .talk-hband{animation:tHBand 2.4s cubic-bezier(.2,.8,.25,1) both}.talk-heading.on em,.talk-heading.on b,.talk-heading.on small{animation:tHText 2.4s ease-out both}
+@keyframes tHBand{0%{transform:translateX(-105%)}17%,84%{transform:none}100%{transform:translateX(-105%)}}
+@keyframes tHText{0%,14%{opacity:0;transform:translateX(-26px)}32%,84%{opacity:1;transform:none}100%{opacity:0}}
 @keyframes tHFade{0%{opacity:0}15%,85%{opacity:1}100%{opacity:0}}
+/* 場面転換のワイプ（@転換）：深紅と象牙の斜めの縞が4枚、左から右へ流れて覆い（0.45秒）、同じ向きに抜ける（0.45秒）。 */
+.talk-wipe{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden}.talk-wipe[hidden]{display:none}
+.talk-wipe i{position:absolute;inset:0;background:#9e1530;clip-path:polygon(-200vh 0,0px 0,-100vh 100%,-200vh 100%)}.talk-wipe i:nth-child(even){background:#f3ead8}
+.talk-wipe i:nth-child(1){--d:0s;--e:.18s}.talk-wipe i:nth-child(2){--d:.06s;--e:.12s}.talk-wipe i:nth-child(3){--d:.12s;--e:.06s}.talk-wipe i:nth-child(4){--d:.18s;--e:0s}
+.talk-wipe[data-p=cover] i{animation:wCover .27s ease-in var(--d) both}.talk-wipe[data-p=uncover] i{animation:wUncover .27s ease-out var(--e) both}
+@keyframes wCover{from{clip-path:polygon(-200vh 0,0px 0,-100vh 100%,-200vh 100%)}to{clip-path:polygon(-200vh 0,calc(100vw + 100vh) 0,100vw 100%,-200vh 100%)}}
+@keyframes wUncover{from{clip-path:polygon(0px 0,300vw 0,300vw 100%,-100vh 100%)}to{clip-path:polygon(calc(100vw + 100vh) 0,300vw 0,300vw 100%,100vw 100%)}}
+/* 背景：入り江の夜・谷。絵が無いときは重ねた下の層（暗くした海の絵）が見える。 */
+.stage.talk-inlet .talk{background:linear-gradient(180deg,transparent 50%,#02030a99),url(./art/bg-inlet-night.jpg) center/cover no-repeat,linear-gradient(#02030acc,#02030acc),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
+.stage.talk-valley .talk{background:linear-gradient(180deg,transparent 62%,#02030a80),url(./art/bg-valley.jpg) center/cover no-repeat,linear-gradient(#02030ad0,#02030ad0),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
+/* 3人目は中央の奥：少し小さく暗く、前の2人より下の層。奥の人が話すと、前の人と溶けて入れ替わる（.melt で透明にし、.jump のあいだに動かす）。 */
+.talk-slot[data-row=back]{z-index:0}.talk-slot[data-row=back].shown .talk-fig{transform:scale(.92);filter:brightness(.55)}
+.talk-slot.melt .talk-fig{transition:opacity .22s,transform .5s,filter .35s}.talk-slot.shown.melt .talk-fig{opacity:0}.talk-slot.jump,.talk-slot.jump .talk-fig{transition:none}
+/* 説明モード（@説明）：上下の黒帯、下の帯に中央寄せの字幕。通常の台詞枠は隠す。集合絵は少し小さく、重ねて並べる。 */
+.talk-bar{position:absolute;left:0;right:0;height:11.5%;z-index:5;background:#000;pointer-events:none;transition:transform .5s cubic-bezier(.2,.8,.25,1)}.talk-bar.top{top:0;transform:translateY(-101%)}.talk-bar.bottom{bottom:0;transform:translateY(101%);display:flex;align-items:center;justify-content:center;padding:0 9%}
+.talk.brief .talk-bar{transform:none}.talk.brief .talk-box{visibility:hidden}
+.talk-sub{margin:0;text-align:center;white-space:pre-line;font:700 clamp(13px,2.3vh,19px)/1.5 var(--sans);letter-spacing:.06em;color:#fff;text-shadow:0 1px 6px #000}
+.talk.brief .talk-slot{bottom:6%}.talk.brief .talk-slot.shown .talk-fig{transform:scale(.74);filter:brightness(.6)}.talk.brief .talk-slot.shown.speaking .talk-fig{transform:scale(.78);filter:none}
+@media (prefers-reduced-motion:reduce){.talk-wipe i,.talk-bar{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms}}
 
 /* 場面の空気（@空気）：立ち絵より前、台詞枠より後ろの粒子。潮風＝飛沫が横切る／夜の港＝灯の粒が昇って明滅／地鳴り＝滴が落ちて時々揺れる。 */
 .talk-air{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}.talk-air i{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);border-radius:50%;opacity:0}
