@@ -72,5 +72,3 @@
 | `prologue.txt` | ゲームの開始時（プロローグ） |
 | `contact-nephilim.txt` | ネフェリムと初めて接触したとき（準備画面の前） |
 | `interlude-lamp.txt` | 主力艦隊が初めて峰の灯で補給したとき（幕間） |
-
-書き直し中の台本は `docs/story-drafts/` に置き、会話画面の改修が終わったら `dist/story/` に移す。

@@ -1,17 +1,6 @@
 // Campaign layer: owns drama text and persistent records. It only reads Battle.report(); it never touches battle state.
 import {DIFFICULTY,FLAGSHIP,NAMES} from './battle.mjs';
 
-export const PROLOGUE={
- title:'第一歌　血海の誓い',
- place:'沈みし峰々 · ヴァルトブルク峰沖 · 明けぬ夜',
- lines:[
-  {speaker:NAMES.guard,text:'見張りより報せでございます。沈んだ谷の底から、ネフェリムが浮上いたしました。峰の灯を目指しております。'},
-  {speaker:NAMES.stake,text:'ならば、まずは血を流させましょうぞ、辺境伯。海に血が満ちれば、城の渇きも癒えまする。……オリーヴェ、前に出すぎるでないぞ。'},
-  {speaker:'ミラルカ辺境伯',text:'全艦、ボクに続け！ あのデカブツを、島には一歩も近づけさせない。十字架でぶち抜いてやる。……すぐ帰るからね。'},
-  {speaker:NAMES.guard,text:'旗を掲げます。辺境伯さまが沈めば艦隊は退くほかございません――杭の前に出られても、辺境伯さまの盾はわたくしが務めます。'}
- ]
-};
-
 const RANK_NOTE={S:'吟遊詩人が百年歌い継ぐ戦い',A:'宮廷で称えられる勝利',B:'誓いを果たした勝利',C:'辛くも掴んだ勝利','—':'撤退'};
 
 export function epilogue(r){
