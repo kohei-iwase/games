@@ -73,10 +73,12 @@ export class SeaRenderer {
  // ドラッグの前後の画面座標が指す海面の差だけ注視点を動かす（つかんだ海面が指に付いてくる）。
  panMap(x0,y0,x1,y1){if(!this.camera)return;const r=this.canvas.getBoundingClientRect(),a=groundPoint(this.camera.inv,x0-r.left,y0-r.top,r.width,r.height),b=groundPoint(this.camera.inv,x1-r.left,y1-r.top,r.width,r.height);if(!a||!b)return;const lim=[MAP.w*.16,MAP.h*.16];this.mapAt=[clamp(this.mapAt[0]+a.x-b.x,-lim[0],lim[0]),clamp(this.mapAt[1]+a.y-b.y,-lim[1],lim[1])];this.updateMapCamera()}
  // クリック位置を戦略マップの座標と、近くの艦隊・敵（画面上の距離）にする。ドラッグ直後のクリックは無視。
- mapClick(event,st){if(this.dragged){this.dragged=false;return null}if(!this.camera||!this.map)return null;const r=this.canvas.getBoundingClientRect(),x=event.clientX-r.left,y=event.clientY-r.top,out={fleet:null,enemy:null,point:null};let best=48;
-  const test=(o,h,key)=>{const p=project(this.camera.vp,mapWorld(o.x,o.y,h),r.width,r.height);if(!p)return;const n=Math.hypot(p.x-x,p.y-y);if(n<best){best=n;out.fleet=out.enemy=null;out[key]=o}};
-  for(const f of st.fleets)test(f,20,'fleet');for(const e of st.enemies)if(e.active)test(e,e.kind==='nephilim'?40:15,'enemy');
-  const g=groundPoint(this.camera.inv,x,y,r.width,r.height);if(g){const p=mapFromGround(g);if(p.x>=0&&p.x<=MAP.w&&p.y>=0&&p.y<=MAP.h)out.point=p}return out}
+ mapClick(event,st){if(this.dragged){this.dragged=false;return null}if(!this.camera||!this.map)return null;const r=this.canvas.getBoundingClientRect(),x=event.clientX-r.left,y=event.clientY-r.top,out={fleet:null,enemy:null,point:null};
+  // 当たり判定：モデルの海面・中ほど・上端の3点を投影して近い方を取り、半径は海面での半径（艦隊72・ネフェリム60・眷属40）を画面に映した大きさ（下限つき）。艦隊 > 敵 > 海面の順に優先。
+  const px=(o,len)=>{const a=project(this.camera.vp,mapWorld(o.x,o.y,0),r.width,r.height),b=project(this.camera.vp,mapWorld(o.x+len,o.y,0),r.width,r.height);return a&&b?Math.hypot(a.x-b.x,a.y-b.y):0};
+  const hit=(list,top,len,min,key)=>{let best=null,bd=1e9;for(const o of list){const rad=Math.max(min,px(o,len(o))),hh=top(o);let d=1e9;for(const h of [0,hh/2,hh]){const p=project(this.camera.vp,mapWorld(o.x,o.y,h),r.width,r.height);if(p)d=Math.min(d,Math.hypot(p.x-x,p.y-y)/rad)}if(d<=1&&d<bd){bd=d;best=o}}if(best)out[key]=best;return best};
+  if(!hit(st.fleets,()=>45,()=>72,26,'fleet'))hit(st.enemies.filter(e=>e.active),e=>e.kind==='nephilim'?90:25,e=>e.kind==='nephilim'?60:40,24,'enemy');
+  if(!out.fleet&&!out.enemy){const g=groundPoint(this.camera.inv,x,y,r.width,r.height);if(g){const p=mapFromGround(g);if(p.x>=0&&p.x<=MAP.w&&p.y>=0&&p.y<=MAP.h)out.point=p}}return out}
  renderMap(st,{selected=null}={}){
   this.map=true;if(this.lost)return;const gl=this.gl,w=this.canvas.clientWidth,h=this.canvas.clientHeight;if(!w||!h)return;const dpr=Math.min(globalThis.devicePixelRatio||1,1.7),now=performance.now()/1000;
   if(this.canvas.width!==Math.round(w*dpr)||this.canvas.height!==Math.round(h*dpr)){this.canvas.width=Math.round(w*dpr);this.canvas.height=Math.round(h*dpr);this.overlay.width=this.canvas.width;this.overlay.height=this.canvas.height}

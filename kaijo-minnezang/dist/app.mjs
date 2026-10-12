@@ -34,6 +34,9 @@ function toPrep(){enc=st.encounter;story=null;phase='prep';report=null;$('#conta
 // 物語の場面（story/名前.txt）を会話で再生し、終わったら done を呼ぶ。台本が読めなければそのまま done。
 function scene(name,done){talk.begin();loadScript(name).then(c=>talk.play(c,done),e=>{console.warn(e.message);talk.abort();done?.()})}
 function launch(kind){if(kind==='skip'){toResult(simulate(options(),{joustPolicy:'normal'}));return}b=newBattle();b.start();phase=kind;judgeKey='';endAt=0;acc=0;lastLog=-1;build();ui()}
+// スキップ：戦略マップは艦隊をネフェリムの隣へ移して接触させる。観戦は残りの戦闘を一気に計算して結果へ（ジョストは通常射出）。
+function skipMap(){if(phase!=='map'||talk.active||st.encounter||st.result||contactAt||finishAt)return;st.rush(st.fleet('main')?'main':st.fleets[0]?.id);ui()}
+function skipWatch(){if(phase!=='watch')return;if(b.mode==='cutin')b.finishCutins();for(let n=0;b.mode!=='ended'&&n<20000;n++){if(b.mode==='cutin')b.finishCutins();else if(b.mode==='paused')b.resume();b.advancePresentation(TICK);b.step(TICK)}toResult(b.report())}
 function toResult(rep){phase='result';lastRep=rep;endAt=0;resultUI();ui()}
 function backToMap(){history.push(lastRep);st.applyBattle(enc,lastRep);toMap()}
 function finish(){report=strategyReport(st,history);newBest=saveRecord(report);recordUI();$('#contact').hidden=true;story='epilogue';phase=null;ui()}
@@ -65,7 +68,7 @@ function resultUI(){const r=lastRep,v=battleVerdict(r),d=r.judge.dealtRatio,t=r.
  $('#resultEnemy').textContent=e.name;$('#resultHpBar').style.width=r.enemyHp/e.maxHp*100+'%';$('#resultHpText').textContent=`${r.enemyHp} / ${e.maxHp}`;$('#resultGo').textContent='海図へ戻る ［Space］'}
 // 観戦中のHUD：判定ゲージと残り時間、倍速ボタン。
 function flowUI(){const watch=phase==='watch';
- $('#prep').hidden=phase!=='prep';$('#result').hidden=phase!=='result';$('#watchCtl').hidden=!watch;$('#judge').hidden=!watch;$('#prepSkip').hidden=!config.skipBattle;
+ $('#prep').hidden=phase!=='prep';$('#result').hidden=phase!=='result';$('#watchCtl').hidden=!watch;$('#judge').hidden=!watch;
  if(!watch)return;
  if(watch){$('#pauseBtn').textContent=b.mode==='paused'?'再開 ［Space］':'一時停止 ［Space］';$('#pauseBtn').disabled=b.mode==='cutin'||b.mode==='ended';$$('#speedCtl [data-speed]').forEach(el=>{const on=+el.dataset.speed===watchSpeed;el.classList.toggle('on',on);el.setAttribute('aria-pressed',on)})}
  {const rt=b.ratios(),left=Math.max(0,Math.ceil(b.duration-b.time)),key=`${Math.round(rt.dealtRatio*100)}:${Math.round(rt.takenRatio*100)}:${left}`;if(key!==judgeKey){judgeKey=key;$('#judge').innerHTML=gaugeHTML(rt.dealtRatio,rt.takenRatio,`<b class="jg-time">残り ${left}秒</b><small>${verdictWord(rt.dealtRatio,rt.takenRatio)}</small>`)}}
@@ -96,7 +99,7 @@ function sound(){const map=phase==='map',battle=phase==='watch'||phase==='prep';
  pb=b;pMode=b.mode;pCutin=ck;pRoot=e.rootUntil;pLunge=lunge;pImpact=imp;pMuz=muz;pSunk=sunk}
 function ui(){storyUI();flowUI();sound();const map=inMap(),body=document.body;
  if(body){body.dataset.view=map?'map':'battle';body.dataset.mode=map?(st.paused?'paused':'running'):b.mode;body.dataset.phase=phase||'';body.dataset.threat=!map&&b.enemy.attack&&b.mode!=='ended'?'on':'';body.dataset.story=story||phase==='prep'||phase==='result'?'on':'';body.dataset.talk=talk.active?'on':''}
- const hint=map?'ドラッグ：視点移動 ／ ホイール：ズーム ／ 艦隊をクリックで選択、海面をクリックで移動 ／ Space：進行・戦術ポーズ':'ドラッグ：旋回 ／ ホイール：ズーム ／ Space：一時停止・再開 ／ F：ジョスト射出';if(hint!==hintKey){hintKey=hint;$('#cameraHint').textContent=hint}
+ const hint=map?'ドラッグ：視点移動 ／ ホイール：ズーム ／ 艦隊をクリックで選択、海面で移動・敵で追跡 ／ Space：進行・戦術ポーズ':'ドラッグ：旋回 ／ ホイール：ズーム ／ Space：一時停止・再開 ／ F：ジョスト射出';if(hint!==hintKey){hintKey=hint;$('#cameraHint').textContent=hint}
  if(map)mapUI();else battleUI()}
 // 戦略マップのHUD：ネフェリムと峰の灯の耐久、経過時間、艦隊一覧、ログ、操作ボタン。
 function mapUI(){
@@ -104,13 +107,13 @@ function mapUI(){
  const nep=st.enemy('nephilim'),sel=st.fleet(fleetSel),live=phase==='map'&&!st.encounter&&!st.result&&!contactAt&&!finishAt,lamp=st.lamp.hp;
  $('#mapNepBar').style.width=(nep?nep.hp/nep.maxHp*100:0)+'%';$('#mapNepText').textContent=nep?`${Math.ceil(nep.hp)} / ${nep.maxHp}`:'撃破';
  $('#mapLampBar').style.width=lamp+'%';$('#mapLampText').textContent=`${Math.ceil(lamp)} / 100`;$('#mapBar').classList.toggle('siege',st.enemies.some(e=>e.active&&e.siege));$('#mapClock').textContent=clock(st.time);
- $('#tacPause').hidden=!(phase==='map'&&st.paused&&live);$('#tacHint').textContent='Spaceで進行 ／ 艦隊を選び、海面をクリックで移動指示';
+ $('#tacPause').hidden=!(phase==='map'&&st.paused&&live);$('#tacHint').textContent='Spaceで進行 ／ 艦隊を選び、海面で移動・敵で追跡';
  $('#mapPlay').textContent=st.paused?'進行 ［Space］':'ポーズ ［Space］';$('#mapPlay').disabled=!live;$('#mapStop').disabled=!sel||!sel.target;$('#mapSpeed').textContent=`×${mapSpeed}`;
  const key=st.fleets.map(f=>`${f.id}:${f.id===fleetSel}:${fleetState(f)}:${f.ships.map(s=>Math.ceil(s.hp)).join(',')}`).join('|');
  if(key!==fleetKey){fleetKey=key;$('#fleetList').innerHTML=st.fleets.map(f=>`<button class="member fleet-card${f.id===fleetSel?' selected':''}" data-fleet="${f.id}" tabindex="-1" aria-pressed="${f.id===fleetSel}" style="--ship-color:${FLEET_COLOR[f.id]||'#d23a54'}"><span class="fleet-head"><strong>${esc(f.name)}</strong><small>${fleetState(f)}</small></span><span class="fleet-ships">${f.ships.map(s=>{const k=KNIGHTS[s.type]||ESCORT;return `<span class="mini-ship" title="${esc(k.name)}" style="--ship-color:${k.color}"><span class="member-crest">${SKILLS[s.type]?.crest||'◈'}</span><span class="bar hp"><i style="width:${s.hp/shipMaxHp(s.type)*100}%"></i></span><small>${Math.ceil(s.hp)}</small></span>`}).join('')}</span></button>`).join('')}
  if(st.log[0]!==mapLogKey){mapLogKey=st.log[0];$('#logList').innerHTML=st.log.slice(0,4).map(l=>`<div class="log-entry"><time>${clock(l.time)}</time><span>${esc(l.text)}</span></div>`).join('')}
- $('#chartTip').textContent='海域全図 · クリックで移動指示';drawMapChart()}
-const fleetState=f=>Math.hypot(f.x-LAMP.x,f.y-LAMP.y)<=LAMP.r+60?'補給圏':f.target?'移動中':'待機';
+ $('#chartTip').textContent='海域全図 · クリックで移動・追跡';drawMapChart()}
+const fleetState=f=>Math.hypot(f.x-LAMP.x,f.y-LAMP.y)<=LAMP.r+60?'補給圏':f.target?.enemyId?'追跡中':f.target?'移動中':'待機';
 function battleUI(){$('#clock').textContent=clock(b.time);$('#statusText').textContent={ready:'出撃準備',running:'交戦中',paused:'一時停止',cutin:'騎士の誓い',ended:'戦闘終了'}[b.mode];$('#bossName').textContent=b.enemyName;
  $('#monsterBar').style.width=$('#monsterLag').style.width=b.enemy.hp/b.enemy.maxHp*100+'%';$('#monsterText').textContent=`${Math.ceil(b.enemy.hp)} / ${b.enemy.maxHp}`;$('#formLabel').textContent=b.enemyKind==='kin'?`残り${swarmAlive(b.enemy)}体`:b.enemy.form===2?'第二形態':'第一形態';$('#bleedText').innerHTML=`<span class="bleed-label">失血</span>${'<i class="on"></i>'.repeat(b.enemy.bleed)}${'<i></i>'.repeat(5-b.enemy.bleed)}${b.enemy.rootUntil>b.time?'<span class="tag root">拘束中</span>':''}`;
  for(const s of b.ships){$(`#${s.id}-hp`).textContent=`${Math.ceil(s.hp)} / ${s.maxHp}`;$(`#${s.id}-hpbar`).style.width=s.hp/s.maxHp*100+'%';$(`#${s.id}-status`).textContent=s.hp<=0?'戦闘不能':s.status;$(`#${s.id}-blood`).textContent=`血${Math.floor(s.blood)}${s.blood>=25?` · 強化${Math.floor(s.blood/25)}`:''}`;$(`#${s.id}-bloodbar`).style.width=s.blood+'%';$(`[data-ship="${s.id}"]`).classList.toggle('down',s.hp<=0)}
@@ -136,7 +139,7 @@ function drawMapChart(){if(!chartCtx)return;const dpr=Math.min(2,window.devicePi
  for(const o of MAP_SHOALS){c.fillStyle='rgba(236,226,190,.16)';circle(o.x,o.y,o.r);c.fill();c.strokeStyle='rgba(236,226,190,.32)';c.setLineDash([3*u,3*u]);c.stroke();c.setLineDash([])}
  for(const o of ISLETS){c.fillStyle='#46565a';circle(o.x,o.y,o.r);c.fill();c.strokeStyle='#8b9a96';c.stroke()}
  c.strokeStyle='#e2c07a88';c.setLineDash([3*u,3*u]);circle(LAMP.x,LAMP.y,LAMP.r+60);c.stroke();c.setLineDash([]);c.fillStyle=st.enemies.some(e=>e.active&&e.siege)?'#ff4d5e':'#f2d58f';circle(LAMP.x,LAMP.y,LAMP.r);c.fill();c.fillStyle='#0c0814';circle(LAMP.x,LAMP.y,LAMP.r*.35);c.fill();
- for(const f of st.fleets){const col=FLEET_COLOR[f.id]||'#d23a54';if(f.target){c.strokeStyle=col;c.lineWidth=1.2*u;c.setLineDash([3*u,3*u]);c.beginPath();c.moveTo(f.x,f.y);c.lineTo(f.target.x,f.target.y);c.stroke();c.setLineDash([]);circle(f.target.x,f.target.y,5*u);c.stroke()}}
+ for(const f of st.fleets){const col=FLEET_COLOR[f.id]||'#d23a54';if(f.target){c.strokeStyle=col;c.lineWidth=1.2*u;c.setLineDash([3*u,3*u]);c.beginPath();c.moveTo(f.x,f.y);for(const p of f.path?.length?f.path:[f.target])c.lineTo(p.x,p.y);c.stroke();c.setLineDash([]);circle(f.target.x,f.target.y,(f.target.enemyId?9:5)*u);c.stroke()}}
  for(const e of st.enemies){if(!e.active)continue;const nep=e.kind==='nephilim';c.fillStyle=nep?'#ff4d5e':'#9b3a52';c.strokeStyle='#fff';c.lineWidth=u;circle(e.x,e.y,(nep?7:4.5)*u);c.fill();c.stroke()}
  for(const f of st.fleets){const col=FLEET_COLOR[f.id]||'#d23a54';c.fillStyle=col;c.strokeStyle='#06121f';c.lineWidth=1.2*u;circle(f.x,f.y,6*u);c.fill();c.stroke();if(f.id===fleetSel){c.strokeStyle='#f2d58f';c.lineWidth=1.8*u;circle(f.x,f.y,9.5*u);c.stroke()}}
 }
@@ -145,14 +148,14 @@ const touch=window.matchMedia('(pointer: coarse)').matches;
 const hero={name:()=>config.heroName,form:()=>config.heroForm,setName:v=>{config.heroName=v;saveConfig(config)},setForm:v=>{config.heroForm=v;saveConfig(config)}};
 const talk=createTalk({root:$('#talk'),stage:$('.stage'),audio,shake:()=>screenFx('fx-hit'),onTap:()=>landscape(),hero});
 function landscape(){if(!touch||document.fullscreenElement||!document.documentElement?.requestFullscreen)return;document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation?.lock?.('landscape')).catch(()=>{})}
-$('#storyGo').onclick=()=>{landscape();newGame()};$('#resetBtn').onclick=newGame;$('#prepGo').onclick=()=>{landscape();launch('watch')};$('#prepSkip').onclick=()=>launch('skip');$('#resultGo').onclick=backToMap;$('#pauseBtn').onclick=play;$('#speedCtl').onclick=ev=>{const el=ev.target.closest('[data-speed]');if(!el)return;setSpeed(+el.dataset.speed);el.blur()};
+$('#storyGo').onclick=()=>{landscape();newGame()};$('#resetBtn').onclick=newGame;$('#prepGo').onclick=()=>{landscape();launch('watch')};$('#prepSkip').onclick=()=>launch('skip');$('#watchSkip').onclick=skipWatch;$('#mapSkip').onclick=skipMap;$('#resultGo').onclick=backToMap;$('#pauseBtn').onclick=play;$('#speedCtl').onclick=ev=>{const el=ev.target.closest('[data-speed]');if(!el)return;setSpeed(+el.dataset.speed);el.blur()};
 $('#prepFormations').onclick=ev=>{const el=ev.target.closest('[data-form]');if(!el)return;fleetOf().formation=el.dataset.form;prepChanged()};$('#prepSkills').onclick=ev=>{const el=ev.target.closest('[data-skill]');if(!el)return;const o=fleetOf().skillOrder,i=o.indexOf(el.dataset.skill);if(i>=0)o.splice(i,1);else o.push(el.dataset.skill);prepChanged()};
 // 戦略マップの操作：再生／ポーズ、停止、倍速、艦隊の選択、海面・海図のクリックで移動指示。
 $('#mapPlay').onclick=ev=>{togglePause();ev.currentTarget.blur()};$('#mapStop').onclick=ev=>{if(fleetSel)st.stop(fleetSel);ev.currentTarget.blur();ui()};$('#mapSpeed').onclick=ev=>{mapSpeed=SPEEDS[(SPEEDS.indexOf(mapSpeed)+1)%SPEEDS.length];ev.currentTarget.blur();ui()};
 $('#fleetList').onclick=ev=>{const el=ev.target.closest('[data-fleet]');if(!el)return;fleetSel=el.dataset.fleet;el.blur();ui()};
-const orderTo=(x,y)=>{if(phase==='map'&&fleetSel&&!st.encounter&&!st.result)st.order(fleetSel,x,y)};
-$('#sea').addEventListener('click',ev=>{if(phase!=='map'||!renderer)return;const c=renderer.mapClick(ev,st);if(!c)return;if(c.fleet)fleetSel=c.fleet.id;else if(c.enemy)orderTo(c.enemy.x,c.enemy.y);else if(c.point)orderTo(c.point.x,c.point.y);ui()});
-chart.addEventListener('click',ev=>{if(phase!=='map')return;const r=chart.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*MAP.w,y=(ev.clientY-r.top)/r.height*MAP.h,near=st.fleets.find(f=>Math.hypot(f.x-x,f.y-y)<110);if(near)fleetSel=near.id;else orderTo(x,y);ui()});
+const orderTo=(x,y)=>{if(phase==='map'&&fleetSel&&!st.encounter&&!st.result)st.order(fleetSel,x,y)},chaseTo=e=>{if(phase==='map'&&fleetSel&&!st.encounter&&!st.result)st.chase(fleetSel,e.id)};
+$('#sea').addEventListener('click',ev=>{if(phase!=='map'||!renderer)return;const c=renderer.mapClick(ev,st);if(!c)return;if(c.fleet)fleetSel=c.fleet.id;else if(c.enemy)chaseTo(c.enemy);else if(c.point)orderTo(c.point.x,c.point.y);ui()});
+chart.addEventListener('click',ev=>{if(phase!=='map')return;const r=chart.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*MAP.w,y=(ev.clientY-r.top)/r.height*MAP.h,d=(o)=>Math.hypot(o.x-x,o.y-y),near=st.fleets.filter(f=>d(f)<130).sort((a,b)=>d(a)-d(b))[0],foe=st.enemies.filter(e=>e.active&&d(e)<(e.kind==='nephilim'?130:100)).sort((a,b)=>d(a)-d(b))[0];if(near)fleetSel=near.id;else if(foe)chaseTo(foe);else orderTo(x,y);ui()});
 
 $('#prepMenu').onclick=()=>$('#helpBtn').click();$('#helpBtn').onclick=()=>{if(b.mode==='running')b.pause();if(phase==='map')st.paused=true;$('#help').open=!$('#help').open;ui()};$('#helpClose').onclick=()=>{$('#help').open=false;ui()};$('#skipCutin').onclick=()=>{b.finishCutins();ui()};const setConfig=(k,v)=>{config[k]=v;applyConfig(b,config);saveConfig(config);ui()};$('#skipBattle').onchange=e=>setConfig('skipBattle',e.target.checked);$('#autoTiming').onchange=e=>setConfig('autoTiming',e.target.checked);$('#shortCutin').onchange=e=>setConfig('shortCutin',e.target.checked);$('#sound').onchange=e=>{setConfig('sound',e.target.checked);audio.setEnabled(e.target.checked)};$('#volume').oninput=e=>{setConfig('volume',+e.target.value);audio.setVolume(+e.target.value)};$('#timingBtn').onclick=()=>{b.pressTiming();ui()};
 $('#viewMode').onchange=e=>{renderer?.setView(e.target.value);config.view=e.target.value;saveConfig(config)};$('#zoomIn').onclick=()=>renderer?.zoomBy(.85);$('#zoomOut').onclick=()=>renderer?.zoomBy(1.17);$('#cameraReset').onclick=()=>renderer?.resetCamera();
@@ -177,7 +180,8 @@ function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);l
   const slow=b.mode==='ended'&&b.decided==='kill'&&endAt&&now<endAt-1800&&!renderer?.reducedMotion?.3:1;b.advancePresentation(dt*slow*(b.mode==='cutin'?watchSpeed:1));
   if(b.mode==='running'){acc+=dt*(b.timing?.12:watchSpeed);for(let n=0;acc>=TICK&&b.mode==='running'&&n<600;n++){b.step(TICK);acc-=TICK}}else acc=0;
   if(b.mode==='ended'){if(!endAt)endAt=now+(b.decided==='kill'?2400:1500);else if(now>=endAt)toResult(b.report())}}
- if(now-lastUI>40){ui();lastUI=now}if(talk.active&&talk.bg==='sea')renderer?.render(b,b.flag().id,false);else if(inMap()||talk.active)renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
+ if(now-lastUI>40){ui();lastUI=now}// 会話中は背景が海の絵（または黒）で覆われるので、3Dは描かない。
+ if(talk.active);else if(inMap())renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
 Object.defineProperty(window,'__st',{get:()=>st});Object.defineProperty(window,'__battle',{get:()=>b});
 build();recordUI();ui();requestAnimationFrame(frame);// 起動のたびに、姫の姿の選択 → プロローグ（途中で名前入力）→ 戦略マップ。名前はプロローグで付け直す。
 talk.pickForm(()=>{hero.setName('');scene('prologue',toMap)});
