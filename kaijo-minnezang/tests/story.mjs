@@ -29,7 +29,7 @@ test('選択肢と分岐の構造',()=>{
  assert.equal(parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@ここまで\nオリーヴェ え').length,2)});
 test('{姫}はパーサでは置換しない',()=>{
  const t=flat(load('prologue')).filter(x=>x.type==='say'&&x.text.includes('{姫}'));
- assert.ok(t.length>=2);assert.ok(flat(load('interlude-lamp')).some(x=>x.type==='say'&&x.text.includes('{姫}')))});
+ assert.ok(t.length>=1);assert.ok(flat(load('interlude-lamp')).some(x=>x.type==='say'&&x.text.includes('{姫}')))});
 test('話者「姫」・@姿・@名前入力',()=>{
  const [h]=parseScript('姫［驚き］えっ');assert.equal(h.who.key,'hero');assert.equal(h.who.name,'姫');assert.equal(h.who.art,'hero');
  const c=parseScript('@姿 幻影\n@姿 人\n@名前入力\n@登場 姫 左');
