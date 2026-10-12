@@ -6,23 +6,24 @@ const count=c=>c.reduce((m,x)=>(m[x.type]=(m[x.type]||0)+1,m),{});
 const tests=[];function test(n,f){f();tests.push(n)}
 
 const flat=c=>c.flatMap(x=>x.type==='choice'?[x,...x.branches.flatMap(flat)]:[x]);
-test('3つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
- const p=load('prologue'),c=load('contact-nephilim'),i=load('interlude-lamp');
- for(const s of [p,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{trans:1,brief:4,bg:3,air:3,narr:3,form:2,enter:10,say:34,sfx:3,fx:4,exit:7,choice:2,nameinput:1});
- assert.deepEqual(count(flat(p)),{trans:1,brief:4,bg:3,air:3,narr:3,form:2,enter:10,say:45,sfx:3,fx:4,exit:7,choice:2,nameinput:1});
- assert.deepEqual(count(c),{trans:1,brief:2,bg:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:8,choice:1});
+test('4つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
+ const p=load('prologue'),k=load('join-kanaan'),c=load('contact-nephilim'),i=load('interlude-lamp');
+ for(const s of [p,k,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
+ assert.deepEqual(count(p),{trans:1,air:3,brief:4,narr:7,bg:7,form:2,enter:7,say:38,sfx:3,fx:5,exit:4,choice:2,nameinput:1});
+ assert.deepEqual(count(flat(p)),{trans:1,air:3,brief:4,narr:9,bg:7,form:2,enter:7,say:45,sfx:3,fx:5,exit:4,choice:2,nameinput:1});
+ assert.deepEqual(count(k),{trans:1,air:1,form:1,enter:3,say:20,brief:2});
+ assert.deepEqual(count(c),{trans:1,brief:2,bg:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:10,choice:1});
  assert.deepEqual(count(i),{trans:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
  assert.equal(p[0].type,'trans');assert.equal(p[0].bg,'sea');assert.equal(c[0].bg,'valley');assert.equal(i[0].bg,'inlet')});
 test('選択肢と分岐の構造',()=>{
  const ch=load('prologue').filter(x=>x.type==='choice');
  assert.equal(ch.length,2);
- assert.deepEqual(ch[0].options,['……は？','心臓って、たとえ話ですよね？','お断りします']);
- assert.deepEqual(ch[0].branches.map(b=>b.length),[2,2,2]);
- assert.equal(ch[0].branches[2][0].who.name,'姫');assert.equal(ch[0].branches[2][1].who.key,'lance');
+ assert.deepEqual(ch[0].options,['迷わず飛び込む','ランタンの鎖を投げる']);
+ assert.deepEqual(ch[0].branches.map(b=>b.length),[2,2]);
+ assert.equal(ch[0].branches[1][0].who.name,'姫');assert.equal(ch[0].branches[1][1].type,'narr');
  assert.deepEqual(ch[1].branches.map(b=>b.length),[2,3]);
  // 分岐の中身は本流に混ざらない
- assert.ok(!load('prologue').some(x=>x.type==='say'&&x.text==='お断りします。'));
+ assert.ok(!load('prologue').some(x=>x.type==='say'&&x.text==='待ってて、いま行く！'));
  const [one]=parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@もし 2\nカナン い\nカナン う\n@ここまで\nオリーヴェ え');
  assert.deepEqual(one.options,['はい','いいえ']);assert.deepEqual(one.branches.map(b=>b.length),[1,2]);
  assert.equal(parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@ここまで\nオリーヴェ え').length,2)});
@@ -55,15 +56,15 @@ test('分岐の書式の誤りは警告になる',()=>{
  const c=parseScript('@選択 はい|いいえ\n@もし 3\nミラルカ あ\n@ここまで\nカナン い');
  assert.equal(c.filter(x=>x.type==='say').length,1,'誤った番号の中身は捨てる')});
 test('名前の解決：短縮形も表示名も同じ人物、未知の名前は札だけ',()=>{
- for(const [a,key,name] of [['ミラルカ','lance','ミラルカ辺境伯'],['ミラルカ辺境伯','lance','ミラルカ辺境伯'],['カナン','stake','老騎士カナン'],['老騎士カナン','stake','老騎士カナン'],['カナン卿','stake','老騎士カナン'],['オリーヴェ','guard','盾持ちオリーヴェ'],['盾持ちオリーヴェ','guard','盾持ちオリーヴェ'],['堅牢なるオリーヴェ','guard','盾持ちオリーヴェ']]){const w=resolveName(a);assert.equal(w.key,key);assert.equal(w.name,name);assert.equal(w.art,CHARACTERS[key].art)}
+ for(const [a,key,name] of [['ミラルカ','lance','ミラルカ'],['ミラルカ辺境伯','lance','ミラルカ'],['カナン','stake','老騎士カナン'],['老騎士カナン','stake','老騎士カナン'],['カナン卿','stake','老騎士カナン'],['オリーヴェ','guard','盾持ちオリーヴェ'],['盾持ちオリーヴェ','guard','盾持ちオリーヴェ'],['堅牢なるオリーヴェ','guard','盾持ちオリーヴェ']]){const w=resolveName(a);assert.equal(w.key,key);assert.equal(w.name,name);assert.equal(w.art,CHARACTERS[key].art)}
  const w=resolveName('見張り');assert.deepEqual(w,{key:null,name:'見張り',art:null,color:null});
  for(const c of Object.values(CHARACTERS)){const f=resolveName(c.name).face;assert.equal(f.length,3,c.key);assert.ok(f.every(Number.isFinite)&&f[2]>=1,c.key)}
  assert.equal(resolveName('姫').face.length,3);
  const [s]=parseScript('見張り［驚き］敵だ！');assert.equal(s.who.name,'見張り');assert.equal(s.who.art,null)});
 test('プロローグの台詞：話者・感情・動き',()=>{
  const say=load('prologue').filter(x=>x.type==='say');
- assert.equal(say[0].who.key,'hero');assert.equal(say[0].emotion,'静か');assert.equal(say[0].motion,null);assert.equal(say[0].symbol,null);
- const m=say.find(x=>x.text.startsWith('到着！'));assert.equal(m.who.name,'ミラルカ辺境伯');assert.equal(m.emotion,'得意');assert.equal(m.motion,'跳ねる');assert.equal(m.symbol.text,'✦')});
+ assert.equal(say[0].who.key,'hero');assert.equal(say[0].emotion,'喜び');assert.equal(say[0].motion,'跳ねる');assert.equal(say[0].symbol.text,'♪');
+ const m=say.find(x=>x.text.startsWith('寝てたんじゃない'));assert.equal(m.who.name,'ミラルカ');assert.equal(m.emotion,'得意');assert.equal(m.motion,null);assert.equal(m.symbol.text,'✦')});
 test('感情だけなら既定の動きが付く',()=>{
  const m=(t)=>parseScript(`ミラルカ［${t}］あ`)[0];
  assert.equal(m('喜び').motion,'跳ねる');assert.equal(m('驚き').motion,'身を引く');assert.equal(m('怒り').motion,'揺れる');
@@ -95,8 +96,8 @@ test('@見出し：見出しと副題（全角｜・半角|・副題なし）、
  const c=parseScript('@見出し 霧月 18日｜峰の灯の島\n@見出し 沖|ネフェリム、浮上\n@見出し 夜\n@見出し ｜副題だけ');
  assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.title,x.sub]),[['heading','霧月 18日','峰の灯の島'],['heading','沖','ネフェリム、浮上'],['heading','夜','']]);
  assert.equal(c[3].type,'warn');assert.equal(c[0].line,1)});
-test('3つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
- for(const n of ['prologue','contact-nephilim','interlude-lamp']){
+test('4つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
+ for(const n of ['prologue','join-kanaan','contact-nephilim','interlude-lamp']){
   const s=load(n);assert.equal(s[0].type,'trans',n+' の最初が @転換');assert.ok(s[0].title&&s[0].sub&&s[0].tag,n);
   const walk=(cmds,on)=>{let saved=null;for(const x of cmds){if(x.type==='brief'){if(x.on){saved=new Set(on);on.clear()}else{on.clear();for(const k of saved||[])on.add(k)}}
    if(x.type==='trans')on.clear();if(x.type==='enter')on.add(x.who.key);else if(x.type==='exit')on.delete(x.who.key);assert.ok(on.size<=3,`${n} ${x.line}行目で4人以上`);if(x.type==='choice')x.branches.forEach(b=>walk(b,new Set(on)))}};walk(s,new Set());

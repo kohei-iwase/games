@@ -97,7 +97,7 @@ export class Strategy{
   const end=(r,why)=>{this.result=r;this.reason=why;this.paused=true;this.note(why)};
   if(!this.enemy('nephilim'))end('victory','ネフェリム撃破');
   else if(this.lamp.hp<=0)end('defeat','峰の灯が消えた');
-  else if(!this.fleets.some(f=>f.ships.some(s=>s.type==='lance')))end('defeat',this.fleets.length?'ミラルカ辺境伯、戦闘不能':'自軍の艦隊が全滅');
+  else if(!this.fleets.some(f=>f.ships.some(s=>s.type==='lance')))end('defeat',this.fleets.length?'ミラルカ、戦闘不能':'自軍の艦隊が全滅');
  }
  // 戦闘への受け渡し。艦の対応は編成順（battleIds）。
  battleOptions(enc){

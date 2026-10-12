@@ -184,4 +184,4 @@ function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);l
  if(talk.active);else if(inMap())renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
 Object.defineProperty(window,'__st',{get:()=>st});Object.defineProperty(window,'__battle',{get:()=>b});
 build();recordUI();ui();requestAnimationFrame(frame);// 起動のたびに、姫の姿の選択 → プロローグ（途中で名前入力）→ 戦略マップ。名前はプロローグで付け直す。
-talk.pickForm(()=>{hero.setName('');scene('prologue',toMap)});
+talk.pickForm(()=>{hero.setName('');scene('prologue',()=>scene('join-kanaan',toMap))});

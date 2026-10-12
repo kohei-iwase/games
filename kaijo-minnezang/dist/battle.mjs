@@ -8,10 +8,10 @@ export const FLAGSHIP='lance';
 // 守る島「峰の灯」と、沈んだ尾根の浅瀬（敵の中心が円内にいる間は速度×0.35）。
 export const ISLAND={x:95,y:330,r:42,name:'峰の灯'};
 export const SHOALS=[{x:430,y:300,r:85},{x:580,y:140,r:70},{x:600,y:500,r:70}];
-// 騎士の表示名。台詞（campaign.mjs）からも参照する。カナンはオリーヴェの祖父。
-export const NAMES={stake:'老騎士カナン',lance:'ミラルカ辺境伯',guard:'盾持ちオリーヴェ'};
+// 騎士の表示名。台詞（campaign.mjs）からも参照する。
+export const NAMES={stake:'老騎士カナン',lance:'ミラルカ',guard:'盾持ちオリーヴェ'};
 // 騎士と随伴艦のテンプレート。編成（fleet）に応じて複製して使う。随伴艦は名前を持たない砲撃役。
-export const KNIGHTS={stake:{id:'stake',name:NAMES.stake,role:'補佐・杭射出・失血',short:'補佐',x:230,y:300,maxHp:250,range:570,speed:64,color:'#c8773f'},lance:{id:'lance',name:'ミラルカ辺境伯',role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#d9dde6',accent:'#b3123a'},guard:{id:'guard',name:NAMES.guard,role:'従騎士・防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}};
+export const KNIGHTS={stake:{id:'stake',name:NAMES.stake,role:'補佐・杭射出・失血',short:'補佐',x:230,y:300,maxHp:250,range:570,speed:64,color:'#c8773f'},lance:{id:'lance',name:NAMES.lance,role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#d9dde6',accent:'#b3123a'},guard:{id:'guard',name:NAMES.guard,role:'従騎士・防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}};
 export const ESCORT={id:'escort',name:'随伴艦',role:'随伴・砲撃',short:'随伴',x:300,y:420,maxHp:160,range:320,speed:70,color:'#b9b2a6'};
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const TAU=Math.PI*2;
