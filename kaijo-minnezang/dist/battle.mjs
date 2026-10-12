@@ -8,8 +8,8 @@ export const FLAGSHIP='lance';
 // 守る島「峰の灯」と、沈んだ尾根の浅瀬（敵の中心が円内にいる間は速度×0.35）。
 export const ISLAND={x:95,y:330,r:42,name:'峰の灯'};
 export const SHOALS=[{x:430,y:300,r:85},{x:580,y:140,r:70},{x:600,y:500,r:70}];
-// 騎士の表示名。台詞（campaign.mjs）からも参照する。カナン卿はオリーヴェの祖父。
-export const NAMES={stake:'カナン卿',lance:'ミラルカ辺境伯',guard:'堅牢なるオリーヴェ'};
+// 騎士の表示名。台詞（campaign.mjs）からも参照する。カナンはオリーヴェの祖父。
+export const NAMES={stake:'老騎士カナン',lance:'ミラルカ辺境伯',guard:'盾持ちオリーヴェ'};
 // 騎士と随伴艦のテンプレート。編成（fleet）に応じて複製して使う。随伴艦は名前を持たない砲撃役。
 export const KNIGHTS={stake:{id:'stake',name:NAMES.stake,role:'補佐・杭射出・失血',short:'補佐',x:230,y:300,maxHp:250,range:570,speed:64,color:'#c8773f'},lance:{id:'lance',name:'ミラルカ辺境伯',role:'旗艦・十字架の杭・突撃',short:'旗艦',x:365,y:500,maxHp:330,range:130,speed:85,color:'#d9dde6',accent:'#b3123a'},guard:{id:'guard',name:NAMES.guard,role:'従騎士・防護・被害担当',short:'盾役',x:510,y:350,maxHp:510,range:0,speed:67,color:'#97bdf3'}};
 export const ESCORT={id:'escort',name:'随伴艦',role:'随伴・砲撃',short:'随伴',x:300,y:420,maxHp:160,range:320,speed:70,color:'#b9b2a6'};
@@ -87,7 +87,7 @@ export class Battle{
  hitEnemy(damage,kind,owner){if(this.mode==='ended')return;const e=this.enemy,value=Math.round(damage);this.stats.dealt[kind]=(this.stats.dealt[kind]||0)+Math.min(value,e.hp);e.hp=Math.max(0,e.hp-value);e.hitUntil=this.time+.22;this.sinkCheck();const color=kind==='stake'?'#e8a06a':kind==='lance'?'#f9d68c':kind==='escort'?'#d8d0bf':'#f28da0';this.label(e.x,e.y-75,`${kind==='stake'?'杭':kind==='lance'?'十字架':kind==='escort'?'砲撃':'失血'} −${value}`,color);if(kind!=='bleed')this.effect('impact',e.x,e.y,{color,size:kind==='lance'?75:34});if(kind==='stake'){e.bleed=Math.min(5,e.bleed+1+Math.floor(owner.blood/25));e.bleedUntil=this.time+12}if(e.hp<=0){this.finish(true);return}if(e.form===1&&this.enemyKind!=='kin'&&e.hp<=e.maxHp*.5){e.form=2;this.queuePause('ネフェリム、第二形態','薙ぎ払いが強化されました。予兆範囲を確認してください。',8)}}
  // 体力が減った分だけ群れの個体を沈める（沈む位置に水柱）。
  sinkCheck(){const e=this.enemy;if(this.enemyKind!=='kin')return;const n=swarmAlive(e);for(let i=n;i<SWARM;i++)if(e.sunk[i]==null){const u=swarmUnit(this,i);e.sunk[i]=this.time+this.after;this.effect('splash',u.x,u.y,{size:1.7,life:1.4});this.label(u.x,u.y-55,'沈没','#f2b0bf');this.log(n?`眷属が1体沈んだ（残り${n}体）。`:'眷属の群れが全滅した。','lance')}}
- // 発砲：随伴艦は舷側から2〜3発の一斉射撃、カナン卿は2本の杭。ダメージは1射ぶんで、残りは外れて海面に水柱を立てる（見た目だけ）。
+ // 発砲：随伴艦は舷側から2〜3発の一斉射撃、カナンは2本の杭。ダメージは1射ぶんで、残りは外れて海面に水柱を立てる（見た目だけ）。
  launchStake(s){const e=this.enemy,esc=s.kind==='escort',a=Math.atan2(e.y-s.y,e.x-s.x),n=esc?2+(+s.id.slice(6)%2):2,cx=s.x+Math.cos(a)*(esc?32:58),cy=s.y+Math.sin(a)*(esc?32:58),shells=[];
   for(let k=0;k<n;k++){const sp=esc?(k-(n-1)/2)*26:(k-.5)*20,ma=this.seq*2.4+k*2.1,mr=60+((this.seq+k*7)%5)*10,miss=k>0,o={x:cx-Math.sin(a)*sp,y:cy+Math.cos(a)*sp};shells.push({o,m:miss?{dx:Math.cos(ma)*mr,dy:Math.sin(ma)*mr}:{dx:0,dy:0},delay:k*(esc?.07:.18),hit:!miss});this.effect('muzzle',o.x,o.y,{angle:a,age:-shells[k].delay,life:.34})}
   this.seq++;this.shots.push({id:++this.seq,owner:s.id,from:{x:s.x,y:s.y},to:{x:e.x,y:e.y},age:0,duration:Math.max(.3,distance(s,e)/520),damage:(esc?12:7)*this.dmgMul(),kind:esc?'escort':'stake',shells});s.cooldown=3;s.fireUntil=this.time+.4}

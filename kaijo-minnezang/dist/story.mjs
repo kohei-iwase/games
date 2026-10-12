@@ -4,8 +4,8 @@
 // 名前の短縮形・表示名 → 登場人物。key は battle.mjs の騎士ID。立ち絵のない名前は札だけ。
 export const CHARACTERS={
  lance:{key:'lance',name:'ミラルカ辺境伯',art:'./art/talk-miralka.png',color:'#b0213f',aliases:['ミラルカ','ミラルカ辺境伯']},
- stake:{key:'stake',name:'カナン卿',art:'./art/talk-kanaan.png',color:'#c8773f',aliases:['カナン','カナン卿']},
- guard:{key:'guard',name:'堅牢なるオリーヴェ',art:'./art/talk-olive.png',color:'#4a78c8',aliases:['オリーヴェ','堅牢なるオリーヴェ']}};
+ stake:{key:'stake',name:'老騎士カナン',art:'./art/talk-kanaan.png',color:'#c8773f',aliases:['カナン','老騎士カナン','カナン卿']},
+ guard:{key:'guard',name:'盾持ちオリーヴェ',art:'./art/talk-olive.png',color:'#4a78c8',aliases:['オリーヴェ','盾持ちオリーヴェ','堅牢なるオリーヴェ']}};
 // 姫（プレイヤー）。名前は再生時にプレイヤーが付けた名前へ、立ち絵は選んだ姿（性別）のものへ差し替わる。art は目印だけ。
 export const HERO={key:'hero',name:'姫',art:'hero',color:'#a8863a'};
 export const EMOTIONS={喜び:'joy',怒り:'anger',驚き:'surprise',哀しみ:'sad',静か:'calm',凛:'brave',照れ:'shy',不敵:'bold',焦り:'panic',呆れ:'weary',得意:'proud'};

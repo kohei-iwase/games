@@ -55,7 +55,7 @@ test('分岐の書式の誤りは警告になる',()=>{
  const c=parseScript('@選択 はい|いいえ\n@もし 3\nミラルカ あ\n@ここまで\nカナン い');
  assert.equal(c.filter(x=>x.type==='say').length,1,'誤った番号の中身は捨てる')});
 test('名前の解決：短縮形も表示名も同じ人物、未知の名前は札だけ',()=>{
- for(const [a,key,name] of [['ミラルカ','lance','ミラルカ辺境伯'],['ミラルカ辺境伯','lance','ミラルカ辺境伯'],['カナン','stake','カナン卿'],['カナン卿','stake','カナン卿'],['オリーヴェ','guard','堅牢なるオリーヴェ'],['堅牢なるオリーヴェ','guard','堅牢なるオリーヴェ']]){const w=resolveName(a);assert.equal(w.key,key);assert.equal(w.name,name);assert.equal(w.art,CHARACTERS[key].art)}
+ for(const [a,key,name] of [['ミラルカ','lance','ミラルカ辺境伯'],['ミラルカ辺境伯','lance','ミラルカ辺境伯'],['カナン','stake','老騎士カナン'],['老騎士カナン','stake','老騎士カナン'],['カナン卿','stake','老騎士カナン'],['オリーヴェ','guard','盾持ちオリーヴェ'],['盾持ちオリーヴェ','guard','盾持ちオリーヴェ'],['堅牢なるオリーヴェ','guard','盾持ちオリーヴェ']]){const w=resolveName(a);assert.equal(w.key,key);assert.equal(w.name,name);assert.equal(w.art,CHARACTERS[key].art)}
  const w=resolveName('見張り');assert.deepEqual(w,{key:null,name:'見張り',art:null,color:null});
  const [s]=parseScript('見張り［驚き］敵だ！');assert.equal(s.who.name,'見張り');assert.equal(s.who.art,null)});
 test('プロローグの台詞：話者・感情・動き',()=>{
