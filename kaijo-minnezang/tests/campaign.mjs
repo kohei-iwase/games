@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import {Battle,simulate} from '../dist/battle.mjs';
 import {loadConfig,saveConfig,applyConfig,DEFAULTS} from '../dist/config.mjs';
-import {PROLOGUE,epilogue,hints,loadRecords,saveRecord,battleVerdict,campaignReport} from '../dist/campaign.mjs';
+import {epilogue,hints,loadRecords,saveRecord,battleVerdict,campaignReport} from '../dist/campaign.mjs';
 const store=new Map();globalThis.localStorage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,String(v))};
-assert(PROLOGUE.lines.length>0);
 const win=new Battle();win.start();win.enemy.hp=1;win.hitEnemy(10,'stake',win.ship('stake'));const w=win.report();
 const lose=new Battle();lose.start();lose.damageShip(lose.ship('lance'),9999,null);const l=lose.report();
 assert.equal(epilogue(w).title,'凱歌');assert.equal(epilogue(l).title,'撤退の歌');

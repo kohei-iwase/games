@@ -1,5 +1,5 @@
 import {Battle,FORMATIONS,SKILLS,DIFFICULTY,WIDTH,HEIGHT,FLAGSHIP,SHOALS,KNIGHTS,ESCORT,simulate,swarmAlive} from './battle.mjs';
-import {PROLOGUE,epilogue,loadRecords,saveRecord,difficultyName,battleVerdict,strategyReport,strategyHints} from './campaign.mjs';
+import {epilogue,loadRecords,saveRecord,difficultyName,battleVerdict,strategyReport,strategyHints} from './campaign.mjs';
 import {Strategy,MAP,LAMP,SHOALS as MAP_SHOALS,ISLETS} from './strategy.mjs';
 import {FLEET_COLOR,shipMaxHp} from './mapscene3d.mjs';
 import {SeaRenderer} from './render3d.mjs';
@@ -75,7 +75,6 @@ const speech=lines=>lines.map(l=>`<p><b>${esc(l.speaker)}</b><span>${esc(l.text)
 function storyUI(){
  $('#story').hidden=!story;const key=story+(report?report.battles+':'+report.time:'');if(!story||key===storyKey){if(!story)storyKey='';return}storyKey=key;const ep=story==='epilogue';
  $('#story').classList.toggle('lost',ep&&report.result!=='victory');
- if(!ep){$('#storyPlace').textContent=PROLOGUE.place;$('#storyTitle').textContent=PROLOGUE.title;$('#storyNote').textContent=`難易度：${difficultyName(b.difficulty)}　·　${DIFFICULTY[b.difficulty].note}`;$('#storyLines').innerHTML=speech(PROLOGUE.lines);$('#storyStats').hidden=true;$('#storyRank').hidden=true;$('#storyHints').innerHTML='';$('#storyGo').textContent='出撃 ［Space］';$('#storyClose').hidden=true;return}
  const e=epilogue(report),r=report;$('#storyPlace').textContent=`戦果報告 · ${difficultyName(r.difficulty)} · 全${r.battles}戦`;$('#storyTitle').textContent=e.title;$('#storyRank').hidden=false;$('#storyRank').textContent=r.rank;$('#storyRank').dataset.rank=r.rank;$('#storyNote').textContent=e.note+(newBest&&r.result==='victory'?'　·　自己ベスト更新':'');$('#storyLines').innerHTML=speech(e.lines);
  $('#storyStats').hidden=false;$('#storyStats').innerHTML=[['所要時間',clock(r.time)],['戦闘回数',`${r.battles}戦`],['峰の灯',`${r.island} / 100`],['総与ダメージ',r.dealtTotal],['総被害',r.taken],['生還',`${r.ships.filter(s=>!s.sunk).length} / ${r.ships.length}`]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
  $('#storyHints').innerHTML=strategyHints(r).map(h=>`<li>${esc(h)}</li>`).join('');$('#storyGo').textContent='最初から ［Space］';$('#storyClose').hidden=true;
@@ -143,7 +142,8 @@ function drawMapChart(){if(!chartCtx)return;const dpr=Math.min(2,window.devicePi
 }
 // Phones play in landscape. Android allows locking only in fullscreen; iOS ignores it and the CSS rotate hint covers portrait.
 const touch=window.matchMedia('(pointer: coarse)').matches;
-const talk=createTalk({root:$('#talk'),stage:$('.stage'),audio,shake:()=>screenFx('fx-hit'),onTap:()=>landscape()});
+const hero={name:()=>config.heroName,form:()=>config.heroForm,setName:v=>{config.heroName=v;saveConfig(config)},setForm:v=>{config.heroForm=v;saveConfig(config)}};
+const talk=createTalk({root:$('#talk'),stage:$('.stage'),audio,shake:()=>screenFx('fx-hit'),onTap:()=>landscape(),hero});
 function landscape(){if(!touch||document.fullscreenElement||!document.documentElement?.requestFullscreen)return;document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation?.lock?.('landscape')).catch(()=>{})}
 $('#storyGo').onclick=()=>{landscape();newGame()};$('#resetBtn').onclick=newGame;$('#prepGo').onclick=()=>{landscape();launch('watch')};$('#prepSkip').onclick=()=>launch('skip');$('#resultGo').onclick=backToMap;$('#pauseBtn').onclick=play;$('#speedCtl').onclick=ev=>{const el=ev.target.closest('[data-speed]');if(!el)return;setSpeed(+el.dataset.speed);el.blur()};
 $('#prepFormations').onclick=ev=>{const el=ev.target.closest('[data-form]');if(!el)return;fleetOf().formation=el.dataset.form;prepChanged()};$('#prepSkills').onclick=ev=>{const el=ev.target.closest('[data-skill]');if(!el)return;const o=fleetOf().skillOrder,i=o.indexOf(el.dataset.skill);if(i>=0)o.splice(i,1);else o.push(el.dataset.skill);prepChanged()};
@@ -179,4 +179,5 @@ function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);l
   if(b.mode==='ended'){if(!endAt)endAt=now+(b.decided==='kill'?2400:1500);else if(now>=endAt)toResult(b.report())}}
  if(now-lastUI>40){ui();lastUI=now}if(talk.active&&talk.bg==='sea')renderer?.render(b,b.flag().id,false);else if(inMap()||talk.active)renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
 Object.defineProperty(window,'__st',{get:()=>st});Object.defineProperty(window,'__battle',{get:()=>b});
-build();recordUI();ui();requestAnimationFrame(frame);scene('prologue',toMap);
+build();recordUI();ui();requestAnimationFrame(frame);// 起動のたびに、姫の姿の選択 → プロローグ（途中で名前入力）→ 戦略マップ。名前はプロローグで付け直す。
+talk.pickForm(()=>{hero.setName('');scene('prologue',toMap)});
