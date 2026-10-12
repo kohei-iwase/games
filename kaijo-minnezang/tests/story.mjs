@@ -9,11 +9,11 @@ const flat=c=>c.flatMap(x=>x.type==='choice'?[x,...x.branches.flatMap(flat)]:[x]
 test('3つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
  const p=load('prologue'),c=load('contact-nephilim'),i=load('interlude-lamp');
  for(const s of [p,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{bg:3,heading:1,air:3,narr:3,form:2,enter:13,say:34,sfx:3,fx:4,exit:11,choice:2,nameinput:1});
- assert.deepEqual(count(flat(p)),{bg:3,heading:1,air:3,narr:3,form:2,enter:13,say:45,sfx:3,fx:4,exit:11,choice:2,nameinput:1});
- assert.deepEqual(count(c),{bg:1,heading:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:8,choice:1});
- assert.deepEqual(count(i),{bg:1,heading:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
- assert.equal(p[0].type,'bg');assert.equal(p[0].value,'sea');assert.equal(i[0].value,'chart')});
+ assert.deepEqual(count(p),{trans:1,brief:4,bg:3,air:3,narr:3,form:2,enter:10,say:34,sfx:3,fx:4,exit:7,choice:2,nameinput:1});
+ assert.deepEqual(count(flat(p)),{trans:1,brief:4,bg:3,air:3,narr:3,form:2,enter:10,say:45,sfx:3,fx:4,exit:7,choice:2,nameinput:1});
+ assert.deepEqual(count(c),{trans:1,brief:2,bg:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:8,choice:1});
+ assert.deepEqual(count(i),{trans:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
+ assert.equal(p[0].type,'trans');assert.equal(p[0].bg,'sea');assert.equal(c[0].bg,'valley');assert.equal(i[0].bg,'inlet')});
 test('選択肢と分岐の構造',()=>{
  const ch=load('prologue').filter(x=>x.type==='choice');
  assert.equal(ch.length,2);
@@ -95,10 +95,21 @@ test('@見出し：見出しと副題（全角｜・半角|・副題なし）、
  const c=parseScript('@見出し 霧月 18日｜峰の灯の島\n@見出し 沖|ネフェリム、浮上\n@見出し 夜\n@見出し ｜副題だけ');
  assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.title,x.sub]),[['heading','霧月 18日','峰の灯の島'],['heading','沖','ネフェリム、浮上'],['heading','夜','']]);
  assert.equal(c[3].type,'warn');assert.equal(c[0].line,1)});
-test('3つの台本は、同時に立つ立ち絵が2人までで、見出しから始まる',()=>{
+test('3つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
  for(const n of ['prologue','contact-nephilim','interlude-lamp']){
-  const s=load(n);assert.equal(s.findIndex(x=>x.type==='heading'),1,n+' の2命令目（背景の次）が見出し');
-  const walk=(cmds,on)=>{for(const x of cmds){if(x.type==='enter')on.add(x.who.key);else if(x.type==='exit')on.delete(x.who.key);assert.ok(on.size<=2,`${n} ${x.line}行目で3人以上`);if(x.type==='choice')x.branches.forEach(b=>walk(b,new Set(on)))}};walk(s,new Set())}});
+  const s=load(n);assert.equal(s[0].type,'trans',n+' の最初が @転換');assert.ok(s[0].title&&s[0].sub&&s[0].tag,n);
+  const walk=(cmds,on)=>{let saved=null;for(const x of cmds){if(x.type==='brief'){if(x.on){saved=new Set(on);on.clear()}else{on.clear();for(const k of saved||[])on.add(k)}}
+   if(x.type==='trans')on.clear();if(x.type==='enter')on.add(x.who.key);else if(x.type==='exit')on.delete(x.who.key);assert.ok(on.size<=3,`${n} ${x.line}行目で4人以上`);if(x.type==='choice')x.branches.forEach(b=>walk(b,new Set(on)))}};walk(s,new Set());
+  const br=s.filter(x=>x.type==='brief');assert.equal(br.length%2,0,n+' の @説明 は開始と終了が対');br.forEach((x,i)=>assert.equal(x.on,i%2===0,n))}});
+test('@転換：背景・見出し・副題・札（省略可）、背景が読めなければ警告',()=>{
+ const c=parseScript('@転換 谷｜沈みし峰々の沖｜ネフェリム、浮上｜接敵\n@転換 入り江|修繕の夜\n@転換 海\n@転換 空｜見出し\n@転換');
+ assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.bg,x.title,x.sub,x.tag]),[['trans','valley','沈みし峰々の沖','ネフェリム、浮上','接敵'],['trans','inlet','修繕の夜','',''],['trans','sea','','','']]);
+ assert.deepEqual(c.slice(3).map(x=>x.type),['warn','warn']);
+ assert.deepEqual(parseScript('@背景 入り江\n@背景 谷\n@背景 空').map(x=>x.value||x.type),['inlet','valley','warn'])});
+test('@見出しの札（3つ目）',()=>{const [h]=parseScript('@見出し 霧月 18日｜峰の灯の島｜夜');assert.deepEqual([h.title,h.sub,h.tag],['霧月 18日','峰の灯の島','夜'])});
+test('@説明 開始／終了、それ以外は警告',()=>{
+ const c=parseScript('@説明 開始\n＊地の文\n@説明 終了\n@説明 途中\n@説明');
+ assert.deepEqual(c.map(x=>x.type),['brief','narr','brief','warn','warn']);assert.deepEqual([c[0].on,c[2].on],[true,false])});
 test('@空気：潮風・夜の港・地鳴り・なし、未知は警告',()=>{
  const c=parseScript('@空気 潮風\n@空気 夜の港\n@空気 地鳴り\n@空気 なし\n@空気 洞窟\n@空気');
  assert.deepEqual(c.slice(0,4).map(x=>[x.type,x.name]),[['air','sea'],['air','harbor'],['air','rumble'],['air',null]]);
