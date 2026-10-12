@@ -8,15 +8,12 @@ model: sonnet
 
 ## 1. 使える状態か確認する
 
-APIキーはファイルや環境変数に置かず、macOS のキーチェーン（サービス名 `openai-api-key`）から読む。
+APIキーの渡し方は、動いている場所で異なる。キーの値を表示・記録・引数に直接書かない。ログやコミットにも含めない。
 
-```sh
-security find-generic-password -s openai-api-key >/dev/null 2>&1 && echo "key ok"
-```
+- **クラウド環境（Claude Code on the web）**：環境の「Network secrets」で、`api.openai.com` への通信に `Authorization: Bearer …` ヘッダーが自動で付く。キーは手元にない。確認は `curl -sS -o /dev/null -w "%{http_code}" https://api.openai.com/v1/models` が `200` を返すこと。
+- **ローカル（macOS）**：キーチェーン（サービス名 `openai-api-key`）から読む。確認は `security find-generic-password -s openai-api-key >/dev/null 2>&1 && echo "key ok"`。
 
-- `key ok` が出なければ、画像は生成せずに「キーチェーンへの登録が必要」と報告して終える。登録コマンドは `security add-generic-password -a "$USER" -s openai-api-key -w`（キーはプロンプトで入力する）。
-- APIキーの値を表示・記録・引数に直接書かない。ログやコミットにも含めない。
-- 失敗したとき（`api.openai.com` が許可されていない、組織認証が必要など）は、エラーメッセージのキーに当たる部分を伏せて報告して終える。自分で別の手段に切り替えない。
+どちらでも確認できなければ、画像は生成せずに報告して終える。失敗したとき（接続拒否、401、組織認証が必要など）は、エラーメッセージのキーに当たる部分を伏せて報告して終える。自分で別の手段に切り替えない。
 
 ## 2. 依頼文を整える
 
@@ -26,7 +23,14 @@ security find-generic-password -s openai-api-key >/dev/null 2>&1 && echo "key ok
 
 ## 3. 生成して保存する
 
-キーはコマンドラインに出さず、curl の設定を標準入力から渡す。
+クラウド環境では、ヘッダーなしでそのまま送る（認証ヘッダーは自動で付く）。
+
+```sh
+curl -sS https://api.openai.com/v1/images/generations \
+  -H "Content-Type: application/json" -d @request.json -o response.json
+```
+
+ローカルでは、キーをコマンドラインに出さず、curl の設定を標準入力から渡す。
 
 ```sh
 KEY=$(security find-generic-password -s openai-api-key -w)
@@ -36,6 +40,8 @@ printf 'header = "Authorization: Bearer %s"\n' "$KEY" | curl -sS -K - \
   -d @request.json -o response.json
 unset KEY
 ```
+
+参考画像に合わせて描かせる（絵柄を揃える）ときは `/v1/images/edits` に `image[]` として画像ファイルを multipart で送る。
 
 - `request.json` の例：`{"model":"${IMAGE_MODEL:-gpt-image-1}","prompt":"…","size":"1024x1536","quality":"medium","n":1,"background":"transparent","output_format":"png"}`。モデルは環境変数 `IMAGE_MODEL` で変えられる。立ち絵は縦長（1024x1536）、紋章やアイコンは正方形（1024x1024）。
 - 応答の `data[i].b64_json` を base64 デコードして PNG にする（`python3` で可）。
