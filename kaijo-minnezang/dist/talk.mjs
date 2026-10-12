@@ -58,7 +58,7 @@ export function createTalk(opts){
  function clearStage(){for(const sl of slots){sl.dataset.who='';sl.className='talk-slot';sl.removeAttribute('data-emo');sl.removeAttribute('data-pref')}fxLayer.textContent='';air(null);endHeading();endWipe();s.brief=null;root.classList.remove('brief');el.face.hidden=true;el.box.classList.remove('face')}
 
  // 話者を前に出す。感情の色味は data-emo、動きは img の animation。
- function speak(c){
+ function speak(c){fxLayer.textContent='';
   for(const sl of slots){sl.classList.remove('speaking');sl.removeAttribute('data-emo')}
   const sl=c.who.key&&slotOf(c.who.key);if(!sl)return;
   const fr=stand().filter(z=>z.dataset.row==='front'),melt=sl.dataset.row==='back'&&!s.brief&&fr.length>0;
@@ -79,7 +79,7 @@ export function createTalk(opts){
   e.className='talk-sym sym-'+sym.kind;e.setAttribute('aria-hidden','true');
   if(sym.kind==='sad'||sym.kind==='weary')e.innerHTML='<i></i><i></i><i></i>';else if(sym.kind==='sweat')e.innerHTML='<i class="drop"></i><i class="drop sm"></i>';else if(sym.kind==='anger')e.innerHTML='<i class="vein"></i>';else e.textContent=sym.text;
   const flip=left+w*.78>r.width-190;
-  e.classList.toggle('flip',flip);e.style.left=((flip?left+w*.22:left+w*.78))+'px';e.style.top=(f.top+f.height*.1-r.top)+'px';fxLayer.appendChild(e);setTimeout(()=>e.remove(),SYMBOL_MS)}
+  e.classList.toggle('flip',flip);e.style.left=((flip?left+w*.22:left+w*.78))+'px';e.style.top=(f.top+f.height*.1-r.top)+'px';fxLayer.textContent='';fxLayer.appendChild(e);setTimeout(()=>e.remove(),SYMBOL_MS)}
  // 顔アイコン：話者が画面にいないとき、立ち絵の顔を切り出して台詞枠の左に出す。face=[顔の中心のx%,y%,拡大]。
  function faceFit(){const f=el.faceImg._f,im=el.faceImg;if(!f)return;const a=im.naturalWidth?im.naturalHeight/im.naturalWidth:1.5;im.style.cssText=`width:${f[2]*100}%;left:${50-f[0]*f[2]}%;top:${50-f[1]*f[2]*a}%`}
  el.faceImg.onload=faceFit;
@@ -110,10 +110,10 @@ export function createTalk(opts){
  // 説明モード：上下に黒帯が入り、台詞は下の帯に字幕で出る。モード前の立ち絵と背景は、終了時に戻す。モード中の @登場 は集合絵。
  function briefOn(){
   if(s.brief)return false;const sv=stand().map(sl=>({who:sl._who,pos:sl.dataset.pref,x:xOf(sl),row:sl.dataset.row,spoke:+sl.dataset.spoke}));
-  s.brief={bg:s.bg,sv};for(const sl of stand())leave(sl);root.classList.add('brief');el.sub.textContent='';el.subNext.hidden=true;el.face.hidden=true;el.box.classList.remove('face');
+  s.brief={bg:s.bg,sv};fxLayer.textContent='';for(const sl of stand())leave(sl);root.classList.add('brief');el.sub.textContent='';el.subNext.hidden=true;el.face.hidden=true;el.box.classList.remove('face');
   s.blocked='trans';s.wait=setTimeout(()=>{s.wait=null;run()},550);return true}
  function briefOff(){
-  if(!s.brief)return false;const {bg,sv}=s.brief;for(const sl of stand())leave(sl);root.classList.remove('brief');el.box.classList.add('idle');
+  if(!s.brief)return false;const {bg,sv}=s.brief;fxLayer.textContent='';for(const sl of stand())leave(sl);root.classList.remove('brief');el.box.classList.add('idle');
   s.blocked='trans';s.wait=setTimeout(()=>{s.wait=null;s.brief=null;setBg(bg);for(const o of sv)seat(o.who,o.pos,o.x,o.row,o.spoke);run()},650);return true}
  function endHeading(){if(el.heading.hidden)return;el.heading.hidden=true;el.heading.classList.remove('on');root.classList.remove('heading')}
 

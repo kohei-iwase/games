@@ -4,7 +4,7 @@
 // 名前の短縮形・表示名 → 登場人物。key は battle.mjs の騎士ID。立ち絵のない名前は札だけ。
 // face=[x%,y%,倍率] は、立ち絵の画像のどこを顔アイコン（話者が画面にいないとき）に切り出すか（顔の中心の位置と拡大。省略時は DEFAULT_FACE）。
 export const CHARACTERS={
- lance:{key:'lance',name:'ミラルカ辺境伯',art:'./art/talk-miralka.png',color:'#b0213f',face:[43,25,2.6],aliases:['ミラルカ','ミラルカ辺境伯']},
+ lance:{key:'lance',name:'ミラルカ',art:'./art/talk-miralka.png',color:'#b0213f',face:[43,25,2.6],aliases:['ミラルカ','ミラルカ辺境伯']},
  stake:{key:'stake',name:'老騎士カナン',art:'./art/talk-kanaan.png',color:'#c8773f',face:[54,21,2.6],aliases:['カナン','老騎士カナン','カナン卿']},
  guard:{key:'guard',name:'盾持ちオリーヴェ',art:'./art/talk-olive.png',color:'#4a78c8',face:[41,24,2.6],aliases:['オリーヴェ','盾持ちオリーヴェ','堅牢なるオリーヴェ']}};
 // 姫（プレイヤー）。名前は再生時にプレイヤーが付けた名前へ、立ち絵は選んだ姿（性別）のものへ差し替わる。art は目印だけ。
