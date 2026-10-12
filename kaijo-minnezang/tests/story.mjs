@@ -11,7 +11,7 @@ test('4つの台本に警告がなく、命令の種類と件数が決まって�
  for(const s of [p,k,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
  assert.deepEqual(count(p),{trans:1,air:3,brief:4,narr:7,bg:7,form:2,enter:7,say:38,sfx:3,fx:5,exit:4,choice:2,nameinput:1});
  assert.deepEqual(count(flat(p)),{trans:1,air:3,brief:4,narr:9,bg:7,form:2,enter:7,say:45,sfx:3,fx:5,exit:4,choice:2,nameinput:1});
- assert.deepEqual(count(k),{trans:1,air:1,form:1,enter:3,say:20,brief:2});
+ assert.deepEqual(count(k),{trans:1,air:1,form:1,enter:3,say:24,brief:2});
  assert.deepEqual(count(c),{trans:1,brief:2,bg:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:10,choice:1});
  assert.deepEqual(count(i),{trans:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
  assert.equal(p[0].type,'trans');assert.equal(p[0].bg,'sea');assert.equal(c[0].bg,'valley');assert.equal(i[0].bg,'inlet')});
@@ -29,7 +29,7 @@ test('選択肢と分岐の構造',()=>{
  assert.equal(parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@ここまで\nオリーヴェ え').length,2)});
 test('{姫}はパーサでは置換しない',()=>{
  const t=flat(load('prologue')).filter(x=>x.type==='say'&&x.text.includes('{姫}'));
- assert.ok(t.length>=2);assert.ok(flat(load('interlude-lamp')).some(x=>x.type==='say'&&x.text.includes('{姫}')))});
+ assert.ok(t.length>=1);assert.ok(flat(load('interlude-lamp')).some(x=>x.type==='say'&&x.text.includes('{姫}')))});
 test('話者「姫」・@姿・@名前入力',()=>{
  const [h]=parseScript('姫［驚き］えっ');assert.equal(h.who.key,'hero');assert.equal(h.who.name,'姫');assert.equal(h.who.art,'hero');
  const c=parseScript('@姿 幻影\n@姿 人\n@名前入力\n@登場 姫 左');

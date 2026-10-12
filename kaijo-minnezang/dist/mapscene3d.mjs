@@ -1,7 +1,7 @@
 // 戦略マップの3Dモデル一覧。scene3d.mjs と同じ {solid, transparent} を返す純粋関数（艦隊の向きだけ前回値を WeakMap に覚える）。
 import {model,multiply,segmentMatrix,TAU,clamp} from './space3d.mjs';
 import {MAP,LAMP,SHOALS,ISLETS,CONTACT} from './strategy.mjs';
-import {KNIGHTS,ESCORT,SWARM_KINDS} from './battle.mjs';
+import {shipSpec,SWARM_KINDS} from './battle.mjs';
 import {monster} from './scene3d.mjs';
 // 戦略マップの座標（3000×2000）は 0.4 倍して中心を原点に置く。論理座標の y は 3D の z に対応する。
 export const MAP_SCALE=.4;
@@ -9,7 +9,7 @@ export const mapWorld=(x,y,h=0)=>[(x-MAP.w/2)*MAP_SCALE,h,(y-MAP.h/2)*MAP_SCALE]
 // 3D空間の海面上の点（groundPoint の戻り値は戦闘用に +500,+325 されている）を、戦略マップの座標へ戻す。
 export const mapFromGround=p=>({x:(p.x-500)/MAP_SCALE+MAP.w/2,y:(p.y-325)/MAP_SCALE+MAP.h/2});
 export const FLEET_COLOR={main:'#d23a54',detached:'#5f8fe0'};
-export const shipMaxHp=type=>(type==='escort'?ESCORT:KNIGHTS[type]).maxHp;
+export const shipMaxHp=type=>shipSpec(type).maxHp;
 const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
 const C={stone:[.40,.47,.51,1],dark:[.07,.12,.17,1],gold:[.70,.52,.25,1],bone:[.70,.72,.62,1],blue:[.30,.48,.76,1]};
 const headings=new WeakMap();
@@ -42,8 +42,8 @@ export function buildMapScene(st,{selected=null,now=0}={}){
   const ang=headings.get(f)??0,c=Math.cos(ang),n=Math.sin(ang),sel=f.id===selected;
   ships.forEach((s,i)=>{
    const off=(i-(ships.length-1)/2)*-52,side=(i%2?1:-1)*(ships.length>1?9:0),px=off*c-side*n,pz=off*n+side*c,[wx,,wz]=mapWorld(f.x,f.y);
-   const esc=s.type==='escort',k=esc?.75:1,g=model([wx+px,3.2+Math.sin(now*1.7+i+f.x)*.5,wz+pz],[ss*k,ss*k,ss*k],ang);
-   const body=esc?[.28,.27,.25,1]:s.type==='guard'?[.18,.23,.34,1]:s.type==='lance'?[.40,.04,.11,1]:[.29,.14,.08,1],trim=esc?[.72,.70,.65,1]:s.type==='lance'?[.80,.82,.88,1]:s.type==='stake'?[.80,.47,.26,1]:C.gold,guard=s.type==='guard';
+   const sp=shipSpec(s.type),esc=!sp.named,ec=hex(sp.color),k=esc?.75:1,g=model([wx+px,3.2+Math.sin(now*1.7+i+f.x)*.5,wz+pz],[ss*k,ss*k,ss*k],ang);
+   const body=esc?[ec[0]*.45,ec[1]*.42,ec[2]*.4,1]:s.type==='guard'?[.18,.23,.34,1]:s.type==='lance'?[.40,.04,.11,1]:[.29,.14,.08,1],trim=esc?[...ec,1]:s.type==='lance'?[.80,.82,.88,1]:s.type==='stake'?[.80,.47,.26,1]:C.gold,guard=s.type==='guard';
    item('disc',[wx+px,1.4,wz+pz],[62*ss*k,1,37*ss*k],[.005,.018,.025,.24],ang);
    local(g,'hull',[0,6,0],[guard?103:118,19,guard?76:58],body);local(g,'hull',[0,16,0],[guard?100:114,3,guard?72:54],trim);
    local(g,'box',[-13,27,0],[48,20,35],C.stone);local(g,'box',[-18,45,0],[25,20,25],C.stone);local(g,'cone',[-18,61,0],[19,23,19],C.dark,Math.PI/4);
