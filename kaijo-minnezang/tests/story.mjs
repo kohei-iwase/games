@@ -9,10 +9,10 @@ const flat=c=>c.flatMap(x=>x.type==='choice'?[x,...x.branches.flatMap(flat)]:[x]
 test('3つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
  const p=load('prologue'),c=load('contact-nephilim'),i=load('interlude-lamp');
  for(const s of [p,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{bg:3,narr:3,form:2,enter:9,say:34,sfx:3,fx:4,exit:5,choice:2,nameinput:1});
- assert.deepEqual(count(flat(p)),{bg:3,narr:3,form:2,enter:9,say:45,sfx:3,fx:4,exit:5,choice:2,nameinput:1});
- assert.deepEqual(count(c),{bg:1,sfx:2,fx:2,narr:1,form:1,enter:3,say:8,choice:1});
- assert.deepEqual(count(i),{bg:1,narr:1,form:1,enter:3,say:18,choice:1});
+ assert.deepEqual(count(p),{bg:3,heading:1,air:3,narr:3,form:2,enter:13,say:34,sfx:3,fx:4,exit:11,choice:2,nameinput:1});
+ assert.deepEqual(count(flat(p)),{bg:3,heading:1,air:3,narr:3,form:2,enter:13,say:45,sfx:3,fx:4,exit:11,choice:2,nameinput:1});
+ assert.deepEqual(count(c),{bg:1,heading:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:8,choice:1});
+ assert.deepEqual(count(i),{bg:1,heading:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
  assert.equal(p[0].type,'bg');assert.equal(p[0].value,'sea');assert.equal(i[0].value,'chart')});
 test('選択肢と分岐の構造',()=>{
  const ch=load('prologue').filter(x=>x.type==='choice');
@@ -57,6 +57,8 @@ test('分岐の書式の誤りは警告になる',()=>{
 test('名前の解決：短縮形も表示名も同じ人物、未知の名前は札だけ',()=>{
  for(const [a,key,name] of [['ミラルカ','lance','ミラルカ辺境伯'],['ミラルカ辺境伯','lance','ミラルカ辺境伯'],['カナン','stake','老騎士カナン'],['老騎士カナン','stake','老騎士カナン'],['カナン卿','stake','老騎士カナン'],['オリーヴェ','guard','盾持ちオリーヴェ'],['盾持ちオリーヴェ','guard','盾持ちオリーヴェ'],['堅牢なるオリーヴェ','guard','盾持ちオリーヴェ']]){const w=resolveName(a);assert.equal(w.key,key);assert.equal(w.name,name);assert.equal(w.art,CHARACTERS[key].art)}
  const w=resolveName('見張り');assert.deepEqual(w,{key:null,name:'見張り',art:null,color:null});
+ for(const c of Object.values(CHARACTERS)){const f=resolveName(c.name).face;assert.equal(f.length,3,c.key);assert.ok(f.every(Number.isFinite)&&f[2]>=1,c.key)}
+ assert.equal(resolveName('姫').face.length,3);
  const [s]=parseScript('見張り［驚き］敵だ！');assert.equal(s.who.name,'見張り');assert.equal(s.who.art,null)});
 test('プロローグの台詞：話者・感情・動き',()=>{
  const say=load('prologue').filter(x=>x.type==='say');
@@ -89,4 +91,16 @@ test('書式の誤りは例外にせず warn として残す',()=>{
  assert.equal(c.filter(x=>x.type==='warn').map(x=>x.line).join(),'1,3,4,5,6,7,8,9,10');
  assert.equal(c[0].type,'warn');assert.ok(c[0].text.includes('@未知'));assert.equal(c[1].type,'say');
  assert.equal(c.find(x=>x.type==='say'&&x.line===9).emotion,null)});
+test('@見出し：見出しと副題（全角｜・半角|・副題なし）、見出しなしは警告',()=>{
+ const c=parseScript('@見出し 霧月 18日｜峰の灯の島\n@見出し 沖|ネフェリム、浮上\n@見出し 夜\n@見出し ｜副題だけ');
+ assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.title,x.sub]),[['heading','霧月 18日','峰の灯の島'],['heading','沖','ネフェリム、浮上'],['heading','夜','']]);
+ assert.equal(c[3].type,'warn');assert.equal(c[0].line,1)});
+test('3つの台本は、同時に立つ立ち絵が2人までで、見出しから始まる',()=>{
+ for(const n of ['prologue','contact-nephilim','interlude-lamp']){
+  const s=load(n);assert.equal(s.findIndex(x=>x.type==='heading'),1,n+' の2命令目（背景の次）が見出し');
+  const walk=(cmds,on)=>{for(const x of cmds){if(x.type==='enter')on.add(x.who.key);else if(x.type==='exit')on.delete(x.who.key);assert.ok(on.size<=2,`${n} ${x.line}行目で3人以上`);if(x.type==='choice')x.branches.forEach(b=>walk(b,new Set(on)))}};walk(s,new Set())}});
+test('@空気：潮風・夜の港・地鳴り・なし、未知は警告',()=>{
+ const c=parseScript('@空気 潮風\n@空気 夜の港\n@空気 地鳴り\n@空気 なし\n@空気 洞窟\n@空気');
+ assert.deepEqual(c.slice(0,4).map(x=>[x.type,x.name]),[['air','sea'],['air','harbor'],['air','rumble'],['air',null]]);
+ assert.deepEqual(c.slice(4).map(x=>x.type),['warn','warn'])});
 console.log(`story: ${tests.length} tests passed`);

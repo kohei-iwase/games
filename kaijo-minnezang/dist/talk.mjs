@@ -1,18 +1,20 @@
 // 物語パートの会話画面（立ち絵のADV）。story.mjs の命令列を、#talk の DOM に再生する。
 // 背景は .stage に talk-sea／talk-chart／talk-black を付け、CSS が海の絵（art/bg-sea.jpg）・暗い海の絵・真っ黒を敷く。
-import {EMOTIONS,MOTIONS} from './story.mjs';
+import {EMOTIONS,MOTIONS,HERO_FACES,DEFAULT_FACE} from './story.mjs';
 import {DEFAULT_HERO_NAME} from './config.mjs';
 const TYPE_MS=34,FX_MS={flash:620,fadeout:1400,fadein:1200,shake:560};
-const SYMBOL_MS=1600,FORM_NAMES=['乙女','若人（わこうど）'],FORMS=['female','male'];
-const SLIDE={left:'-34vw',center:'0',right:'34vw'};
+const SYMBOL_MS=1800,HEADING_MS=2200,FORM_NAMES=['乙女','若人（わこうど）'],FORMS=['female','male'];
+// 立ち絵の中心（画面幅の%）。1人のときは中央やや右寄り、2人のときは左右。
+const X_ONE=58,X_LEFT=30,X_RIGHT=72,AIR_N={sea:30,harbor:26,rumble:34},SYM_SFX={sad:'dots',weary:'dots'};
 
 // opts: {root:#talk, stage:.stage, audio, shake(), onTap(), hero:{name(), form(), setName(v), setForm(v)}}（姫の名前・姿は config.mjs に保存される）
 export function createTalk(opts){
  const {root,stage,audio,hero}=opts,$=s=>root.querySelector(s);
- const el={fade:$('#talkFade'),flash:$('#talkFlash'),stageBox:$('#talkFigures'),box:$('#talkBox'),name:$('#talkName'),text:$('#talkText'),next:$('#talkNext'),log:$('#talkLogView'),logList:$('#talkLogList'),choice:$('#talkChoice'),choiceTitle:$('#talkChoiceTitle'),choiceList:$('#talkChoiceList'),nameModal:$('#talkNameModal'),nameForm:$('#talkNameForm'),nameInput:$('#talkNameInput')};
+ const el={heading:$('#talkHeading'),hTitle:$('#talkHTitle'),hSub:$('#talkHSub'),face:$('#talkFace'),faceImg:$('#talkFace img'),fade:$('#talkFade'),flash:$('#talkFlash'),stageBox:$('#talkFigures'),box:$('#talkBox'),name:$('#talkName'),text:$('#talkText'),next:$('#talkNext'),log:$('#talkLogView'),logList:$('#talkLogList'),choice:$('#talkChoice'),choiceTitle:$('#talkChoiceTitle'),choiceList:$('#talkChoiceList'),nameModal:$('#talkNameModal'),nameForm:$('#talkNameForm'),nameInput:$('#talkNameInput')};
+ const airLayer=document.createElement('div');airLayer.className='talk-air';el.stageBox.after(airLayer); // @空気 の粒子は立ち絵より前、台詞枠より後ろ
  const fxLayer=document.createElement('div');fxLayer.className='talk-fxlayer';root.appendChild(fxLayer); // 感情の記号は立ち絵・台詞枠より前のこの層に出す
- const slots={};for(const pos of ['left','center','right'])slots[pos]=el.stageBox.querySelector(`[data-pos="${pos}"]`);
- const s={active:false,bg:'black',cmds:[],i:0,done:null,wait:null,typing:null,full:'',shown:0,blocked:null,busyUntil:0,log:[],ghost:false,pick:null};
+ const slots=[...el.stageBox.querySelectorAll('.talk-slot')];
+ const s={tick:0,active:false,bg:'black',cmds:[],i:0,done:null,wait:null,typing:null,full:'',shown:0,blocked:null,busyUntil:0,log:[],ghost:false,pick:null};
 
  const setBg=v=>{s.bg=v;stage.classList.toggle('talk-sea',v==='sea');stage.classList.toggle('talk-chart',v==='chart');stage.classList.toggle('talk-black',v==='black')};
  const restart=(node,cls)=>{node.classList.remove(cls);void node.offsetWidth;node.classList.add(cls)};
@@ -20,33 +22,69 @@ export function createTalk(opts){
  const heroName=()=>hero.name()||'姫',heroArt=()=>`./art/talk-hero-${hero.form()==='male'?'male':'female'}.png`,sub=t=>String(t).replaceAll('{姫}',heroName());
  const artOf=who=>who.key==='hero'?heroArt():who.art;
  // 幻影の姿のあいだ、姫の立ち絵に .ghost を付ける（半透明・淡い青白・ゆっくり上下に揺れる）。
- const applyGhost=()=>{for(const sl of Object.values(slots))sl.classList.toggle('ghost',sl.dataset.who==='hero'&&s.ghost)};
- const slotOf=key=>Object.values(slots).find(x=>x.dataset.who===key);
+ const applyGhost=()=>{for(const sl of slots)sl.classList.toggle('ghost',sl.dataset.who==='hero'&&s.ghost)};
+ const slotOf=key=>slots.find(x=>x.dataset.who===key),stand=()=>slots.filter(x=>x.dataset.who),place=(sl,x)=>sl.style.setProperty('--x',x+'%');
 
+ // 立つのは最大2人。1人は中央やや右、2人は左右（新しく登場した人の希望の側。中は空いている側）。3人目が来たら、最も長く話していない人を退場させ、その場所に入れ替わる。
  function enter(who,pos){
-  const old=slotOf(who.key);if(old&&old!==slots[pos])leave(old);
-  const sl=slots[pos],fig=sl.firstElementChild,img=fig.firstElementChild;
-  if(sl.dataset.who===who.key&&!sl.classList.contains('out'))return;
-  sl.dataset.who=who.key;img.src=artOf(who);img.alt='';sl.style.setProperty('--slide',SLIDE[pos]);
-  sl.classList.remove('shown','out','speaking');sl.classList.add('pre');void sl.offsetWidth;sl.classList.remove('pre');sl.classList.add('shown');applyGhost()}
+  const cur=slotOf(who.key);
+  if(cur){cur.dataset.pref=pos;cur.dataset.spoke=++s.tick;return}
+  let st=stand(),at=null;
+  if(st.length>=2){const old=st.reduce((a,b)=>+a.dataset.spoke<=+b.dataset.spoke?a:b);at=parseFloat(old.style.getPropertyValue('--x'));leave(old);st=stand()}
+  const sl=slots.find(x=>!x.dataset.who&&!x.classList.contains('out'))||slots.find(x=>!x.dataset.who),img=sl.firstElementChild.firstElementChild;
+  sl.dataset.who=who.key;sl.dataset.pref=pos;sl.dataset.spoke=++s.tick;img.src=artOf(who);img.alt='';
+  sl.classList.remove('shown','out','speaking');sl.classList.add('pre');
+  if(at!==null)place(sl,at);else if(!st.length)place(sl,X_ONE);
+  else{const o=st[0],left=pos==='left'||(pos==='center'&&o.dataset.pref==='right');place(sl,left?X_LEFT:X_RIGHT);place(o,left?X_RIGHT:X_LEFT)}
+  void sl.offsetWidth;sl.classList.remove('pre');sl.classList.add('shown');applyGhost()}
  function leave(sl){
   if(!sl.dataset.who)return;sl.dataset.who='';sl.classList.remove('speaking');sl.classList.add('out');
-  setTimeout(()=>{if(!sl.dataset.who)sl.classList.remove('shown','out')},560)}
- const clearStage=()=>{for(const sl of Object.values(slots)){sl.dataset.who='';sl.className='talk-slot';sl.removeAttribute('data-emo');}fxLayer.textContent=''};
+  setTimeout(()=>{if(!sl.dataset.who)sl.classList.remove('shown','out')},600)}
+ const exit=sl=>{leave(sl);const st=stand();if(st.length===1)place(st[0],X_ONE)};
+ function clearStage(){for(const sl of slots){sl.dataset.who='';sl.className='talk-slot';sl.removeAttribute('data-emo');sl.removeAttribute('data-pref')}fxLayer.textContent='';air(null);endHeading();el.face.hidden=true;el.box.classList.remove('face')}
 
  // 話者を前に出す。感情の色味は data-emo、動きは img の animation。
  function speak(c){
-  for(const sl of Object.values(slots)){sl.classList.remove('speaking');sl.removeAttribute('data-emo')}
+  for(const sl of slots){sl.classList.remove('speaking');sl.removeAttribute('data-emo')}
   const sl=c.who.key&&slotOf(c.who.key);if(!sl)return;
-  sl.classList.add('speaking');if(c.emotion)sl.dataset.emo=EMOTIONS[c.emotion];
+  sl.classList.add('speaking');sl.dataset.spoke=++s.tick;if(c.emotion)sl.dataset.emo=EMOTIONS[c.emotion];
   const img=sl.firstElementChild.firstElementChild;for(const m of Object.values(MOTIONS))img.classList.remove('m-'+m);
   if(c.motion){void img.offsetWidth;img.classList.add('m-'+MOTIONS[c.motion]);audio.sfx('m-'+MOTIONS[c.motion])}
   if(c.symbol)symbol(sl,c.symbol)}
- // 話者の頭の横に記号をポンと出す（前面の層に置く。弾んで、1.5秒ほどで消える）。
+ // 話者の頭の横に、白い吹き出し（しっぽ付き）で記号を出す（前面の層に置く。ポンと弾んで、1.8秒ほどで消える）。
+ // 哀しみ・呆れは3つの点が順に光り、焦りは汗のしずく、怒りは怒りマーク。画面の右に寄りすぎるときは頭の左に出す。
  function symbol(sl,sym){
-  const e=document.createElement('span'),r=root.getBoundingClientRect(),f=sl.firstElementChild.firstElementChild.getBoundingClientRect();
-  e.className='talk-sym sym-'+sym.kind;e.textContent=sym.text;e.setAttribute('aria-hidden','true');
-  e.style.left=(f.left+f.width*.72-r.left)+'px';e.style.top=(f.top+f.height*.06-r.top)+'px';fxLayer.appendChild(e);setTimeout(()=>e.remove(),SYMBOL_MS)}
+  audio.sfx('sym-'+(SYM_SFX[sym.kind]||sym.kind));
+  const img=sl.firstElementChild.firstElementChild;if(img.complete&&img.naturalWidth)bubble(sl,img,sym);else img.addEventListener('load',()=>{if(sl.dataset.who)bubble(sl,img,sym)},{once:true})}
+ // 位置は、移動中・拡大中の立ち絵の見かけではなく、置き先（--x）と絵の縦横比から決める。
+ function bubble(sl,img,sym){
+  const e=document.createElement('span'),r=root.getBoundingClientRect(),f=img.getBoundingClientRect(),w=f.height*img.naturalWidth/img.naturalHeight,cx=r.width*parseFloat(sl.style.getPropertyValue('--x'))/100,left=cx-w/2;
+  e.className='talk-sym sym-'+sym.kind;e.setAttribute('aria-hidden','true');
+  if(sym.kind==='sad'||sym.kind==='weary')e.innerHTML='<i></i><i></i><i></i>';else if(sym.kind==='sweat')e.innerHTML='<i class="drop"></i><i class="drop sm"></i>';else if(sym.kind==='anger')e.innerHTML='<i class="vein"></i>';else e.textContent=sym.text;
+  const flip=left+w*.78>r.width-190;
+  e.classList.toggle('flip',flip);e.style.left=((flip?left+w*.22:left+w*.78))+'px';e.style.top=(f.top+f.height*.1-r.top)+'px';fxLayer.appendChild(e);setTimeout(()=>e.remove(),SYMBOL_MS)}
+ // 顔アイコン：話者が画面にいないとき、立ち絵の顔を切り出して台詞枠の左に出す。face=[顔の中心のx%,y%,拡大]。
+ function faceFit(){const f=el.faceImg._f,im=el.faceImg;if(!f)return;const a=im.naturalWidth?im.naturalHeight/im.naturalWidth:1.5;im.style.cssText=`width:${f[2]*100}%;left:${50-f[0]*f[2]}%;top:${50-f[1]*f[2]*a}%`}
+ el.faceImg.onload=faceFit;
+ function showFace(who){
+  const on=!!(who.key&&who.art&&!slotOf(who.key));el.box.classList.toggle('face',on);el.face.hidden=!on;if(!on)return;
+  const isHero=who.key==='hero';el.face.style.setProperty('--c',who.color||'#6d6a78');el.face.classList.toggle('ghost',isHero&&s.ghost);
+  el.faceImg._f=isHero?HERO_FACES[hero.form()==='male'?'male':'female']:who.face||DEFAULT_FACE;const src=artOf(who);
+  if(!el.faceImg.src.endsWith(src.slice(1)))el.faceImg.src=src;faceFit()}
+ // 場面の空気：@空気 で、会話中ずっと続く粒子と環境音（音は audio.air）。sea=飛沫が横切る、harbor=灯の粒が昇る、rumble=滴が落ちて時々揺れる。減らす動きの設定では粒を少なく、揺れなし。
+ function air(name){
+  clearTimeout(s.quake);airLayer.textContent='';airLayer.className='talk-air';audio.air?.(name);if(!name)return;
+  const calm=matchMedia('(prefers-reduced-motion:reduce)').matches,n=Math.ceil(AIR_N[name]/(calm?3:1)),R=(a,b)=>a+Math.random()*(b-a);airLayer.classList.add('air-'+name);
+  for(let i=0;i<n;i++){const e=document.createElement('i'),d=name==='rumble'?R(1.3,2.8):name==='harbor'?R(5,9):R(8,16),big=name==='sea'?R(2,5):name==='harbor'?R(3,7):R(1.5,2.6);
+   e.style.cssText=`--x:${R(0,100)}%;--y:${name==='sea'?R(8,90):name==='harbor'?R(55,100):0}%;--s:${big}px;--w:${name==='sea'?big*R(1,4):name==='rumble'?big:big}px;--h:${name==='rumble'?R(10,24):big}px;--d:${d}s;--dl:-${R(0,d)}s;--o:${R(.4,.9)};--dx:${R(-4,4)}vw;--dy:${R(-4,4)}vh`;
+   if(name==='rumble'&&Math.random()<.22)e.className='blood';airLayer.appendChild(e)}
+  if(name==='rumble'&&!calm){const q=()=>{restart(el.stageBox,'quake');audio.sfx('rumble');s.quake=setTimeout(q,R(5000,9000))};s.quake=setTimeout(q,R(2500,5000))}}
+ // 場面の見出しカード：背景の上に左から帯が滑り込み、見出しと副題を出して、約2.2秒で消える。
+ function heading(c){
+  el.hTitle.textContent=sub(c.title);el.hSub.textContent=c.sub?sub(c.sub):'';el.hSub.hidden=!c.sub;
+  root.classList.add('heading');el.heading.hidden=false;restart(el.heading,'on');
+  s.blocked='wait';s.wait=setTimeout(()=>{s.wait=null;run()},HEADING_MS)}
+ function endHeading(){if(el.heading.hidden)return;el.heading.hidden=true;el.heading.classList.remove('on');root.classList.remove('heading')}
 
  function type(text){
   clearInterval(s.typing);s.full=text;s.shown=0;el.text.textContent='';el.next.hidden=true;
@@ -55,9 +93,9 @@ export function createTalk(opts){
 
  function line(c){
   const narr=c.type==='narr';
-  el.box.classList.toggle('mind',!!c.mind);el.box.classList.toggle('narr',narr||!c.who.name);
+  el.box.classList.remove('idle');el.box.classList.toggle('mind',!!c.mind);el.box.classList.toggle('narr',narr||!c.who.name);
   el.name.hidden=narr;if(!narr){el.name.textContent=c.who.key==='hero'?heroName():c.who.name;el.name.style.setProperty('--c',c.who.color||'#6d6a78')}
-  if(narr)speak({who:{key:null}});else speak(c);
+  if(narr)speak({who:{key:null}});else speak(c);showFace(narr?{}:c.who);
   const text=sub(c.text);
   s.log.push({name:narr?'':c.who.key==='hero'?heroName():c.who.name,text,mind:!!c.mind,narr});
   s.blocked='line';type(text)}
@@ -71,7 +109,7 @@ export function createTalk(opts){
 
  // 次の命令へ。台詞と @間 で止まり、それ以外は続けて実行する。
  function run(){
-  s.blocked=null;
+  s.blocked=null;endHeading();
   while(s.i<s.cmds.length){
    const c=s.cmds[s.i++];
    switch(c.type){
@@ -79,10 +117,12 @@ export function createTalk(opts){
     case 'wait':s.blocked='wait';s.wait=setTimeout(()=>{s.wait=null;run()},c.sec*1000);return;
     case 'bg':setBg(c.value);break;
     case 'enter':enter(c.who,c.pos);break;
-    case 'exit':{const sl=slotOf(c.who.key);if(sl)leave(sl);break}
+    case 'exit':{const sl=slotOf(c.who.key);if(sl)exit(sl);break}
+    case 'heading':heading(c);return;
     case 'fx':fx(c.name);break;
     case 'sfx':audio.sfx(c.name);break;
     case 'form':s.ghost=c.value==='ghost';applyGhost();break;
+    case 'air':air(c.name);break;
     case 'nameinput':askName();return;
     case 'choice':choose(c.options.map(sub),{},i=>{s.log.push({name:'選択',text:'▶ '+sub(c.options[i]),pick:true});s.cmds=[...s.cmds.slice(0,s.i),...c.branches[i],...s.cmds.slice(s.i)];run()});return;
     case 'warn':console.warn(`台本 ${c.line}行目：${c.text}`);break}}
@@ -101,7 +141,7 @@ export function createTalk(opts){
  // 台本を読み込む間も黒い画面を出しておく。
  function begin(){
   clearTimeout(s.wait);clearInterval(s.typing);clearStage();closePrompts();s.ghost=false;s.log=[];s.cmds=[];s.i=0;s.busyUntil=0;s.blocked='load';s.active=true;
-  el.fade.style.transition='none';el.fade.classList.add('on');el.flash.classList.remove('on');el.box.classList.add('narr');el.name.hidden=true;el.text.textContent='';el.next.hidden=true;el.log.hidden=true;
+  el.fade.style.transition='none';el.fade.classList.add('on');el.flash.classList.remove('on');el.box.classList.add('narr','idle');el.name.hidden=true;el.text.textContent='';el.next.hidden=true;el.log.hidden=true;
   root.hidden=false;stage.classList.add('talk-on');setBg('black')}
  function play(cmds,done){
   if(!s.active)begin();s.cmds=cmds;s.i=0;s.done=done;
