@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    {"name": "minnezang", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8123", "--directory", "kaijo-minnezang/dist"], "port": 8123}
+    {"name": "minnezang", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8123", "--directory", "kaijo-minnezang/dist"], "port": 8123},
+    {"name": "promo", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8124", "--directory", "kaijo-minnezang"], "port": 8124}
   ]
 }

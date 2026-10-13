@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>海城のミンネザング 文字PV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Old+Mincho:wght@900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060509;--fg:#eee6d6;--gold:#c9a45c;--line:#2a2430}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic",sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
+canvas{width:min(100%,1280px);aspect-ratio:16/9;background:#000;display:block;border:1px solid var(--line);cursor:pointer}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
+button{background:#15111b;color:var(--fg);border:1px solid var(--gold);padding:8px 14px;border-radius:4px;font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+a{color:var(--gold)}
+video{display:none}
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div class="bar">
+  <button id="play">再生（音あり）</button>
+  <button id="rec">録画して保存（音あり）</button>
+  <span id="msg"></span>
+</div>
+<video id="v" src="jizura.mp4" preload="auto" playsinline></video>
+<script>
+// JIZURA で書き出した文字PV（jizura.mp4）を流し、9行目「かつて、誰かの姫だったもの。」のカットだけを
+// 紋章（交差した槍・象牙の盾・兜、盾の上部に海城）に差し替え、文言を盾の面に載せる。カットの終わりは水に溶けるように揺らいで消える。
+const W=1280,H=720,S=1.5,cv=document.getElementById('c'),ctx=cv.getContext('2d'),video=document.getElementById('v');
+const CUT0=10.30,CUT1=12.10,GIANT=[10.5,11.35];
+const SERIF='"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif',HEAVY='"Zen Old Mincho","Hiragino Mincho ProN",serif';
+const IVORY='#efe6d2',GOLD='#c9a45c',CRIMSON='#c8102e',DEEP='#8e0f22';
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)),lerp=(a,b,p)=>a+(b-a)*p,seg=(t,a,b)=>clamp((t-a)/(b-a));
+const outCubic=p=>1-Math.pow(1-p,3),outExpo=p=>p>=1?1:1-Math.pow(2,-10*p);
+const rnd=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+
+// ── 線画 ──（off: 描く先のコンテキスト。p: 線を引く進み 0→1）
+function stroke(c,p,len,fn){c.save();c.setLineDash([len,len]);c.lineDashOffset=len*(1-p);c.beginPath();fn();c.stroke();c.restore()}
+function rose(c,cx,cy,R,rot,p){c.beginPath();[[1,4,0],[.62,3,.5],[.34,5,1.2]].forEach(([k,n,o],j)=>{const end=Math.PI*2*clamp(p*1.3-j*.15);
+  for(let a=0;a<=end;a+=.03){const r=R*k*(.55+.45*Math.abs(Math.cos(n*a/2))),x=cx+Math.cos(a+rot+o)*r,y=cy+Math.sin(a+rot+o)*r;a?c.lineTo(x,y):c.moveTo(x,y)}});c.stroke()}
+function shieldPath(c,cx,cy,s){c.moveTo(cx-s*.72,cy-s*.85);c.lineTo(cx+s*.72,cy-s*.85);c.lineTo(cx+s*.72,cy-s*.1);c.quadraticCurveTo(cx+s*.62,cy+s*.62,cx,cy+s);c.quadraticCurveTo(cx-s*.62,cy+s*.62,cx-s*.72,cy-s*.1);c.closePath()}
+function shield(c,cx,cy,s,p,t){ // 紋様の盾：二重の縁、十字、中央に薔薇、茨の縁飾り
+  stroke(c,p,8*s,()=>shieldPath(c,cx,cy,s));stroke(c,clamp(p*1.2-.1),7*s,()=>shieldPath(c,cx,cy+s*.03,s*.86));
+  stroke(c,clamp(p*1.4-.3),4*s,()=>{c.moveTo(cx,cy-s*.73);c.lineTo(cx,cy+s*.84);c.moveTo(cx-s*.62,cy-s*.22);c.lineTo(cx+s*.62,cy-s*.22)});
+  rose(c,cx,cy-s*.22,s*.26,t*.6,clamp(p*1.5-.4));
+  const q=clamp(p*1.6-.6);for(let i=0;i<14*q;i++){const a=i/14,x=lerp(cx-s*.6,cx+s*.6,a),y=cy-s*.74+Math.sin(a*Math.PI*4)*4;c.beginPath();c.moveTo(x,y);c.lineTo(x+5,y-9);c.lineTo(x+9,y);c.stroke()}
+}
+function lance(c,x0,y0,x1,y1,p,flip){ // 騎士槍：柄、鍔、穂先、燕尾の旗
+  const dx=x1-x0,dy=y1-y0,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L,nx=-uy,ny=ux,at=(k,o=0)=>[x0+dx*k+nx*o,y0+dy*k+ny*o];
+  stroke(c,p,L*1.2,()=>{const[a,b]=at(0,-4),[e,f]=at(.86,-2.5),[g,h]=at(.86,2.5),[i,j]=at(0,4),[k,l]=at(1);c.moveTo(a,b);c.lineTo(e,f);c.lineTo(k,l);c.lineTo(g,h);c.lineTo(i,j);c.closePath()});
+  stroke(c,clamp(p*1.3-.2),400,()=>{const[a,b]=at(.18,-22),[e,f]=at(.3,-6),[g,h]=at(.3,6),[i,j]=at(.18,22);c.moveTo(a,b);c.lineTo(e,f);c.lineTo(g,h);c.lineTo(i,j);c.closePath()});
+  stroke(c,clamp(p*1.5-.45),600,()=>{const sd=flip?-1:1,[a,b]=at(.66,0),[e,f]=at(.66,sd*70),[g,h]=at(.54,sd*52),[i,j]=at(.48,sd*70),[k,l]=at(.48,0);c.moveTo(a,b);c.lineTo(e,f);c.lineTo(g,h);c.lineTo(i,j);c.lineTo(k,l)});
+}
+function helm(c,cx,cy,s,p,t){ // 兜（グレートヘルム）と羽飾り
+  stroke(c,p,7*s,()=>{c.moveTo(cx-s*.55,cy+s*.75);c.lineTo(cx-s*.6,cy-s*.2);c.quadraticCurveTo(cx-s*.58,cy-s*.85,cx,cy-s*.9);c.quadraticCurveTo(cx+s*.58,cy-s*.85,cx+s*.6,cy-s*.2);c.lineTo(cx+s*.55,cy+s*.75);c.closePath()});
+  stroke(c,clamp(p*1.3-.2),5*s,()=>{c.rect(cx-s*.5,cy-s*.18,s*.42,s*.08);c.rect(cx+s*.08,cy-s*.18,s*.42,s*.08);c.moveTo(cx,cy-s*.9);c.lineTo(cx,cy+s*.75)});
+  const q=clamp(p*1.5-.4);for(let i=0;i<10*q;i++){c.beginPath();c.arc(cx+s*.3+(i%2)*s*.1,cy+s*.12+Math.floor(i/2)*s*.1,2.5,0,7);c.stroke()}
+  stroke(c,clamp(p*1.4-.35),6*s,()=>{for(let k=0;k<5;k++){c.moveTo(cx,cy-s*.9);c.bezierCurveTo(cx+s*(.1+k*.08),cy-s*(1.5+k*.05),cx+s*(.6+k*.12),cy-s*(1.3-k*.08)+Math.sin(t*3+k)*6,cx+s*(.9+k*.1),cy-s*(.85-k*.1))}});
+}
+function castle(c,cx,cy,s,p,t){ // 海城：船体の上に城壁と二つの塔、旗
+  stroke(c,p,9*s,()=>{c.moveTo(cx-s*1.1,cy+s*.35);c.lineTo(cx+s*1.2,cy+s*.35);c.quadraticCurveTo(cx+s*1.0,cy+s*.75,cx+s*.7,cy+s*.8);c.lineTo(cx-s*.8,cy+s*.8);c.quadraticCurveTo(cx-s*1.05,cy+s*.7,cx-s*1.1,cy+s*.35)});
+  stroke(c,clamp(p*1.2-.1),12*s,()=>{c.moveTo(cx-s*.75,cy+s*.35);c.lineTo(cx-s*.75,cy-s*.1);for(let i=0;i<8;i++){const x=cx-s*.75+i*s*.1875;c.lineTo(x,cy-s*.18);c.lineTo(x+s*.094,cy-s*.18);c.lineTo(x+s*.094,cy-s*.1);c.lineTo(x+s*.1875,cy-s*.1)}c.lineTo(cx+s*.75,cy+s*.35)});
+  [[-.45,.9],[.35,1.15]].forEach(([ox,h],k)=>stroke(c,clamp(p*1.3-.25-k*.1),6*s,()=>{const x=cx+ox*s,w=s*.24;c.moveTo(x-w/2,cy-s*.1);c.lineTo(x-w/2,cy-s*h*.6);c.lineTo(x,cy-s*h);c.lineTo(x+w/2,cy-s*h*.6);c.lineTo(x+w/2,cy-s*.1);c.moveTo(x-w*.15,cy-s*h*.45);c.lineTo(x-w*.15,cy-s*h*.32);c.lineTo(x+w*.15,cy-s*h*.32);c.lineTo(x+w*.15,cy-s*h*.45)}));
+  stroke(c,clamp(p*1.5-.5),3*s,()=>{const x=cx+.35*s,y=cy-s*1.15;c.moveTo(x,y);c.lineTo(x,y-s*.35);c.lineTo(x+s*.3+Math.sin(t*6)*4,y-s*.28);c.lineTo(x,y-s*.2)});
+}
+
+// ── 差し替えカット ──
+const layer=document.createElement('canvas');layer.width=W;layer.height=H;const lc=layer.getContext('2d');
+function text(c,str,x,y,size,font,color,t0,t,{track=0,step=.035,glow='rgba(0,0,0,.7)'}={}){
+  c.font=`${size}px ${font}`;c.textBaseline='middle';const ch=[...str],ws=ch.map(s=>c.measureText(s).width),tot=ws.reduce((a,b)=>a+b,0)+track*(ch.length-1);let px=x-tot/2;
+  ch.forEach((s,i)=>{const p=outExpo(seg(t,t0+i*step,t0+i*step+.25));if(p>0){c.save();c.globalAlpha=p;c.shadowColor=glow;c.shadowBlur=size*.3;c.fillStyle=color;c.fillText(s,px+(1-p)*20,y);c.restore()}px+=ws[i]+track});
+}
+function heraldry(t){ // 紋章を1枚に組む：交差した槍、象牙の盾（上部の深紅の帯に海城）、兜。文言は盾の面に載せる
+  const c=lc,lt=t-CUT0,gb=GIANT.reduce((s,b)=>s+(t>=b?Math.exp(-(t-b)*6):0),0);
+  c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.fillStyle='#070509';c.fillRect(0,0,W,H);
+  const g=c.createRadialGradient(W/2,H/2,0,W/2,H/2,600);g.addColorStop(0,`rgba(142,15,34,${.3+gb*.2})`);g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(0,0,W,H);
+  const cx=W/2,cy=H*.54,s=230,pul=1+gb*.015;
+  c.save();c.translate(cx,cy);c.scale(pul,pul);c.translate(-cx,-cy);
+  // 交差した槍（後ろ）
+  const lp=outCubic(seg(lt,0,.3));c.strokeStyle=GOLD;c.lineWidth=2.4;c.lineJoin='round';
+  lance(c,cx-330,cy+260,lerp(cx-330,cx+300,lp),lerp(cy+260,cy-250,lp),1,false);lance(c,cx+330,cy+260,lerp(cx+330,cx-300,lp),lerp(cy+260,cy-250,lp),1,true);
+  // 兜（上）
+  const hp=outCubic(seg(lt,.25,.55));if(hp>0){c.save();c.globalAlpha=hp;c.strokeStyle=GOLD;c.lineWidth=2.4;helm(c,cx,cy-s*1.18+(1-hp)*-30,s*.38,1,t);c.restore()}
+  // 盾：縦軸まわりに回り込んで正面を向く
+  const sp=outCubic(seg(lt,.08,.45));c.save();c.translate(cx,cy);c.scale(lerp(.15,1,sp),1);c.translate(-cx,-cy);c.globalAlpha=clamp(sp*1.5);
+  c.shadowColor='rgba(0,0,0,.6)';c.shadowBlur=30;c.fillStyle=IVORY;c.beginPath();shieldPath(c,cx,cy,s);c.fill();c.shadowBlur=0;
+  c.save();c.beginPath();shieldPath(c,cx,cy,s);c.clip();c.fillStyle=DEEP;c.fillRect(cx-s,cy-s*.85,s*2,s*.42);c.restore();
+  c.strokeStyle=GOLD;c.lineWidth=3;c.beginPath();shieldPath(c,cx,cy,s);c.stroke();c.lineWidth=1.2;c.beginPath();shieldPath(c,cx,cy+s*.03,s*.9);c.stroke();
+  c.strokeStyle=IVORY;c.lineWidth=1.8;castle(c,cx,cy-s*.66,s*.17,1,t);
+  c.restore();
+  c.restore();
+  // 文言（盾の面）
+  if(sp>.9){c.save();c.translate(cx,cy);c.scale(pul,pul);c.translate(-cx,-cy);
+    text(c,'ネフェリム',cx,cy-s*.3,18,SERIF,DEEP,CUT0+.35,t,{track:10,step:.02,glow:'rgba(0,0,0,0)'});
+    text(c,'かつて、',cx,cy-s*.08,36,SERIF,'#2a1c1c',CUT0+.4,t,{step:.04,glow:'rgba(0,0,0,0)'});
+    text(c,'誰かの姫',cx,cy+s*.18,68,HEAVY,CRIMSON,CUT0+.5,t,{step:.06,glow:'rgba(0,0,0,0)'});
+    text(c,'だったもの。',cx,cy+s*.5,34,SERIF,'#2a1c1c',CUT0+.75,t,{step:.035,glow:'rgba(0,0,0,0)'});c.restore()}
+  // 最後に水面が上がる
+  const sink=seg(lt,1.45,1.8);if(sink>0){const wy=lerp(H,H*.3,sink*sink);const wg=c.createLinearGradient(0,wy,0,H);wg.addColorStop(0,'rgba(20,4,12,.85)');wg.addColorStop(1,'#050206');c.fillStyle=wg;c.fillRect(0,wy,W,H-wy);
+    c.strokeStyle='rgba(239,230,210,.45)';c.lineWidth=1;c.beginPath();for(let x=0;x<=W;x+=12){const y=wy+Math.sin(x*.02+t*8)*3;x?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}
+}
+// 水に溶ける：最後の短い間だけ、行ごとに揺らして滲ませながら消す
+function dissolve(t,alpha){
+  const d=seg(t,CUT1-.3,CUT1+.05),amp=d*d*36;ctx.save();ctx.scale(S,S);ctx.globalAlpha=alpha;
+  if(d<=0){ctx.drawImage(layer,0,0)}else{for(let y=0;y<H;y+=4){const off=Math.sin(y*.045+t*14)*amp*(.4+.6*y/H),drip=d*d*24*rnd(Math.floor(y/24));
+    ctx.globalAlpha=alpha*clamp(1-d*(1.1-.5*(y/H)));ctx.drawImage(layer,0,y,W,4,off,y+drip,W,4)}}
+  ctx.restore();
+}
+
+function draw(t){
+  ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;
+  if(video.readyState>=2)ctx.drawImage(video,0,0,cv.width,cv.height);else{ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height)}
+  if(t>=CUT0-.06&&t<CUT1+.12){if(t>=CUT0&&t<CUT1){ctx.fillStyle='#070509';ctx.fillRect(0,0,cv.width,cv.height)}heraldry(Math.min(t,CUT1));dissolve(t,seg(t,CUT0-.06,CUT0)*(1-seg(t,CUT1+.02,CUT1+.12)))}
+}
+
+// ── 再生・録画 ──（音は動画から取り、録画にも流す）
+let ac=null,dest=null,fixed=null;
+const q=new URLSearchParams(location.search);if(q.has('t'))fixed=+q.get('t');
+function audio(){if(ac)return;ac=new AudioContext();const src=ac.createMediaElementSource(video);dest=ac.createMediaStreamDestination();src.connect(ac.destination);src.connect(dest)}
+function frame(){draw(fixed!=null?fixed:video.currentTime);requestAnimationFrame(frame)}
+async function play(){audio();await ac.resume();video.currentTime=0;await video.play()}
+video.addEventListener('loadeddata',()=>{if(fixed!=null)video.currentTime=fixed});
+video.addEventListener('error',()=>{document.getElementById('msg').textContent='jizura.mp4 を読み込めません（promo/ に置いてください）'});
+cv.onclick=document.getElementById('play').onclick=()=>{fixed=null;play()};
+document.getElementById('rec').onclick=async()=>{
+  const btn=document.getElementById('rec'),msg=document.getElementById('msg');
+  const type=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
+  if(!type){msg.textContent='このブラウザは録画（MediaRecorder）に対応していません';return}
+  fixed=null;audio();await ac.resume();
+  const rec=new MediaRecorder(new MediaStream([...cv.captureStream(30).getVideoTracks(),...dest.stream.getAudioTracks()]),{mimeType:type,videoBitsPerSecond:16e6}),chunks=[];
+  rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  rec.onstop=()=>{const ext=type.startsWith('video/mp4')?'mp4':'webm',url=URL.createObjectURL(new Blob(chunks,{type}));msg.innerHTML=`録画しました：<a href="${url}" download="minnezang-lyric-pv.${ext}">minnezang-lyric-pv.${ext} を保存</a>`;btn.disabled=false};
+  btn.disabled=true;msg.textContent='録画中…';video.onended=()=>{rec.stop();video.onended=null};rec.start();await play();
+};
+document.fonts.load(`92px ${HEAVY}`);document.fonts.load(`40px ${SERIF}`);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

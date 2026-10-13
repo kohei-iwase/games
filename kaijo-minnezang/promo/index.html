@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>海城のミンネザング 宣伝動画</title>
+<style>
+:root{--bg:#0b0a10;--fg:#eee6d6;--gold:#d8b46a;--line:#3a3242}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic",sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
+canvas{width:min(100%,1280px);aspect-ratio:16/9;background:#000;display:block;border:1px solid var(--line)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
+button{background:#1c1824;color:var(--fg);border:1px solid var(--gold);padding:8px 14px;border-radius:4px;font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<div class="bar">
+  <button id="play">最初から再生</button>
+  <button id="rec">録画して保存（15秒）</button>
+  <span id="msg"></span>
+</div>
+<script>
+const W=1280,H=720,DUR=15,cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const SERIF='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif',SANS='"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif';
+const names=['bg-sea.jpg','bg-valley.jpg','bg-inlet-night.jpg','talk-olive.png','talk-kanaan.png','talk-miralka.png'];
+const img={};
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)),lerp=(a,b,p)=>a+(b-a)*p;
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const outCubic=p=>1-Math.pow(1-p,3),outBack=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
+const rnd=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+
+// 背景：画面いっぱいに敷き、ゆっくり寄る（ケン・バーンズ）
+function bg(im,zoom,ox=0,oy=0,alpha=1){
+  const s=Math.max(W/im.width,H/im.height)*zoom,w=im.width*s,h=im.height*s;
+  ctx.globalAlpha=alpha;ctx.drawImage(im,(W-w)/2+ox,(H-h)/2+oy,w,h);ctx.globalAlpha=1;
+}
+function shade(color,a){ctx.fillStyle=color;ctx.globalAlpha=a;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
+function vignette(a,color='0,0,0'){
+  const g=ctx.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.9);
+  g.addColorStop(0,`rgba(${color},0)`);g.addColorStop(1,`rgba(${color},${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+// 1文字ずつ浮かび上がる文字
+function text(str,x,y,t0,t,{size=40,font=SERIF,color='#f4ecdc',align='center',step=.045,glow='rgba(0,0,0,.8)',weight='600',maxW=W-80}={}){
+  ctx.font=`${weight} ${size}px ${font}`;ctx.textBaseline='middle';
+  const fit=Math.min(1,maxW/ctx.measureText(str).width);if(fit<1){size*=fit;ctx.font=`${weight} ${size}px ${font}`}
+  const chars=[...str],ws=chars.map(c=>ctx.measureText(c).width),total=ws.reduce((a,b)=>a+b,0);
+  let cx=align==='center'?x-total/2:align==='right'?x-total:x;
+  chars.forEach((c,i)=>{
+    const p=outCubic(seg(t,t0+i*step,t0+i*step+.35));
+    if(p>0){ctx.save();ctx.globalAlpha=p;ctx.shadowColor=glow;ctx.shadowBlur=size*.4;ctx.fillStyle=color;ctx.fillText(c,cx,y+(1-p)*size*.35);ctx.restore()}
+    cx+=ws[i];
+  });
+}
+// 漂う光の粒
+function motes(t,n,color,speed=20,seed=0){
+  for(let i=0;i<n;i++){
+    const x=(rnd(i+seed)*W+Math.sin(t*.7+i)*30)%W,y=(rnd(i*3+seed)*H-t*speed*(.5+rnd(i*7+seed)))%H,yy=y<0?y+H:y;
+    const a=.35+.45*Math.sin(t*2+i*1.3),r=1+rnd(i*5+seed)*2.4;
+    ctx.fillStyle=color;ctx.globalAlpha=clamp(a);ctx.beginPath();ctx.arc(x,yy,r,0,7);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+// 斜め縞のワイプ（ゲームの場面転換と同じ考え方）：p=0→0.5で覆い、0.5→1で開く
+function wipe(p,c1,c2){
+  if(p<=0||p>=1)return;
+  const n=14,sw=170;ctx.save();ctx.translate(W/2,H/2);ctx.rotate(-.35);
+  for(let i=0;i<n;i++){
+    const d=i*.025,q=p<.5?outCubic(clamp((p*2-d)/(1-.35))):1-outCubic(clamp(((p-.5)*2-d)/(1-.35)));
+    if(q<=0)continue;
+    ctx.fillStyle=i%2?c1:c2;const x=-n*sw/2+i*sw;ctx.fillRect(x,-H,sw*q+1,H*2);
+  }
+  ctx.restore();
+}
+// 騎士のカットイン：斜めの帯、立ち絵、名前の札、台詞
+function cutin(t,t0,t1,im,side,name,line,accent){
+  const p=outCubic(seg(t,t0,t0+.45)),q=seg(t,t1-.25,t1),k=p*(1-q),dir=side==='left'?-1:1;
+  if(k<=0)return;
+  // 集中線
+  ctx.save();ctx.globalAlpha=.25*k;ctx.strokeStyle='#fff';ctx.lineWidth=2;
+  for(let i=0;i<40;i++){const a=rnd(i+t0)*Math.PI*2+t*.3,r0=260+rnd(i*9)*120;ctx.beginPath();ctx.moveTo(W/2+Math.cos(a)*r0,H/2+Math.sin(a)*r0);ctx.lineTo(W/2+Math.cos(a)*900,H/2+Math.sin(a)*900);ctx.stroke()}
+  ctx.restore();
+  // 帯
+  ctx.save();ctx.translate(W/2,H*.62);ctx.rotate(-.06*dir);
+  ctx.globalAlpha=.88*k;ctx.fillStyle='#120d18';ctx.fillRect(-W,-110,W*2*p,220);
+  ctx.globalAlpha=k;ctx.fillStyle=accent;ctx.fillRect(-W,-118,W*2*p,6);ctx.fillRect(-W,112,W*2*p,6);
+  ctx.restore();
+  // 立ち絵
+  const h=700,w=im.width*h/im.height,drift=(t-t0)*14;
+  const px=side==='left'?lerp(-w,40,p)+drift:lerp(W,W-w-40,p)-drift;
+  ctx.save();ctx.globalAlpha=k;ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=30;ctx.drawImage(im,px,H-h+20,w,h);ctx.restore();
+  // 名前の札と台詞
+  const tx=side==='left'?560:W-560,al=side==='left'?'left':'right';
+  ctx.save();ctx.globalAlpha=k;
+  ctx.font=`700 26px ${SANS}`;const nw=ctx.measureText(name).width+36;
+  ctx.fillStyle=accent;ctx.fillRect(side==='left'?tx:tx-nw,H*.62-88,nw,42);
+  ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign=al;ctx.fillText(name,side==='left'?tx+18:tx-18,H*.62-67);
+  ctx.restore();ctx.textAlign='left';
+  if(q<1)text(line,tx,H*.62+12,t0+.35,t,{size:42,align:al,step:.04,maxW:side==='left'?W-tx-40:tx-40});
+  // 登場の閃光
+  const f=1-seg(t,t0,t0+.25);if(f>0)shade('#fff',f*.6);
+}
+
+function draw(t){
+  ctx.clearRect(0,0,W,H);
+  // ① 0–3.4秒：沈んだ世界
+  if(t<3.4){
+    bg(img['bg-sea.jpg'],1.04+t*.025);vignette(.6);motes(t,40,'#ffe9c4',14);
+    text('海が山を呑んで、幾百年。',W/2,H*.72,.5,t,{size:46});
+    text('峰の頂は、島となって海に浮かぶ。',W/2,H*.72+64,1.5,t,{size:34,color:'#e8dcc4'});
+    shade('#000',1-seg(t,0,.7));
+  }
+  // ② 3.2–6.6秒：巨人ネフェリムの浮上
+  if(t>=3.2&&t<6.6){
+    const s=seg(t,3.2,6.6),shake=t>3.7&&t<4.4?Math.sin(t*90)*8*(1-seg(t,3.7,4.4)):0;
+    bg(img['bg-valley.jpg'],1.2-s*.12,shake,lerp(40,0,outCubic(s))+shake*.5);
+    shade('#5a0008',.15+.1*Math.sin(t*6));vignette(.8,'20,0,0');motes(t,50,'#ff6a4a',-40,9);
+    const st=outBack(seg(t,3.65,3.95)),a=seg(t,3.65,3.75)*(1-seg(t,4.7,4.95));
+    if(a>0){ctx.save();ctx.globalAlpha=a;ctx.translate(W/2,H*.2);ctx.scale(2.2-1.2*st,2.2-1.2*st);ctx.font=`800 64px ${SERIF}`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.shadowColor='#ff2a2a';ctx.shadowBlur=30;ctx.fillStyle='#fff3ee';ctx.fillText('沈んだ谷より、巨人が来る。',0,0);ctx.restore();ctx.textAlign='left'}
+    cutin(t,4.75,6.6,img['talk-olive.png'],'right','オリーヴェ','この島の灯を目指しております！','#3d6fa8');
+  }
+  // ③ 6.6–9.0秒：老騎士カナン ／ ④ 9.0–11.6秒：ミラルカ辺境伯
+  if(t>=6.6&&t<11.6){
+    const mir=t>=9;bg(img['bg-sea.jpg'],1.25+(t-6.6)*.02,mir?-60:60,30);shade(mir?'#2a0010':'#0a1430',.55);vignette(.7);
+    motes(t,30,mir?'#ffb0c0':'#bfe0ff',30,mir?3:5);
+    cutin(t,6.6,9.0,img['talk-kanaan.png'],'left','老騎士カナン','老いぼれの杭、まだ錆びてはおらんぞ。','#8a6a2a');
+    cutin(t,9.0,11.6,img['talk-miralka.png'],'right','ミラルカ辺境伯','ボクの名を、その身に刻んでやる！','#a8122a');
+  }
+  // ⑤ 11.4–15秒：題名
+  if(t>=11.4){
+    const s=seg(t,11.4,15);bg(img['bg-inlet-night.jpg'],1.12-s*.08);shade('#05030c',.35);vignette(.85);motes(t,70,'#f6d98a',10,21);
+    text('第一歌　血海の誓い',W/2,H*.3,11.8,t,{size:26,color:'#d8b46a',step:.05,font:SANS,weight:'500'});
+    const g=seg(t,12.0,12.9);
+    if(g>0){ctx.save();ctx.globalAlpha=.5*g*(0.8+.2*Math.sin(t*3));ctx.strokeStyle='#d8b46a';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(W/2-300*g,H*.36);ctx.lineTo(W/2+300*g,H*.36);ctx.moveTo(W/2-300*g,H*.58);ctx.lineTo(W/2+300*g,H*.58);ctx.stroke();ctx.restore()}
+    text('海城のミンネザング',W/2,H*.47,12.0,t,{size:92,color:'#f7e3ae',step:.07,glow:'rgba(216,140,60,.9)',weight:'800'});
+    text('騎士は、最愛の人を城の心臓に捧げて戦う。',W/2,H*.68,13.0,t,{size:30,step:.035});
+    text('3D戦術海戦　試作版',W/2,H*.8,13.9,t,{size:22,color:'#b9ad98',font:SANS,weight:'500',step:.03});
+    shade('#000',seg(t,14.7,15));
+  }
+  wipe(seg(t,3.0,3.6),'#7a0c1c','#1a0a12');
+  wipe(seg(t,11.1,11.7),'#d8b46a','#120d18');
+}
+
+// 再生・録画
+let start=null,raf=0,fixed=null;
+const q=new URLSearchParams(location.search);if(q.has('t'))fixed=+q.get('t');
+function loop(now){
+  if(start===null)start=now;
+  const t=fixed??((now-start)/1000)%DUR;draw(t);raf=requestAnimationFrame(loop);
+}
+function restart(){start=null;fixed=null}
+document.getElementById('play').onclick=restart;
+document.getElementById('rec').onclick=()=>{
+  const btn=document.getElementById('rec'),msg=document.getElementById('msg');
+  const type=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
+  if(!type){msg.textContent='このブラウザは録画（MediaRecorder）に対応していません';return}
+  const rec=new MediaRecorder(cv.captureStream(60),{mimeType:type,videoBitsPerSecond:12e6}),chunks=[];
+  rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  rec.onstop=()=>{
+    const ext=type.startsWith('video/mp4')?'mp4':'webm',url=URL.createObjectURL(new Blob(chunks,{type}));
+    msg.innerHTML=`録画しました：<a href="${url}" download="kaijo-minnezang-promo.${ext}">kaijo-minnezang-promo.${ext} を保存</a>`;btn.disabled=false;
+  };
+  btn.disabled=true;msg.textContent='録画中…';restart();rec.start();setTimeout(()=>rec.stop(),DUR*1000+100);
+};
+Promise.all(names.map(n=>new Promise((ok,ng)=>{const i=new Image();i.onload=()=>{img[n]=i;ok()};i.onerror=()=>ng(n);i.src='../dist/art/'+n})))
+  .then(()=>raf=requestAnimationFrame(loop))
+  .catch(n=>{document.getElementById('msg').textContent='画像を読み込めません：'+n+'（kaijo-minnezang/ をサーバーで開いてください）'});
+</script>
+</body>
+</html>
