@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>海城のミンネザング イメージビデオ</title>
+<style>
+:root{--bg:#060509;--fg:#eee6d6;--gold:#c9a45c;--line:#2a2430}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic",sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
+canvas{width:min(100%,1280px);aspect-ratio:16/9;background:#000;display:block;border:1px solid var(--line);cursor:pointer}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}
+button{background:#15111b;color:var(--fg);border:1px solid var(--gold);padding:8px 14px;border-radius:4px;font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<div class="bar">
+  <button id="play">再生（音あり）</button>
+  <button id="wav">BGMをWAVで保存</button>
+  <button id="rec">録画して保存（17.6秒・音あり）</button>
+  <span id="msg"></span>
+</div>
+<script src="score.js"></script>
+<script>
+const W=1280,H=720,BAR=72,cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const SERIF='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif',SANS='"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif';
+const IVORY='#efe6d2',GOLD='#c9a45c',CRIMSON='#8e0f22',NAVY='#0a1026';
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v)),lerp=(a,b,p)=>a+(b-a)*p,seg=(t,a,b)=>clamp((t-a)/(b-a));
+const outCubic=p=>1-Math.pow(1-p,3),inOut=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2,outExpo=p=>p>=1?1:1-Math.pow(2,-10*p);
+const rnd=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+
+// 心臓の鼓動（映像と音で共有する拍の時刻と強さ）
+const pulse=t=>BEATS.concat(GIANT).reduce((s,[b,k])=>{const d=t-b;return s+(d>=0?k*Math.exp(-d*9):0)+(d>=.22?k*.6*Math.exp(-(d-.22)*10):0)},0);
+
+// ── 文字 ──
+function htext(str,x,y,t0,t,{size=40,font=SERIF,color=IVORY,track=0,step=.05,weight='500',glow='rgba(0,0,0,.7)',blur=.4,rise=.3}={}){
+  ctx.font=`${weight} ${size}px ${font}`;ctx.textBaseline='middle';
+  const ch=[...str],ws=ch.map(c=>ctx.measureText(c).width),tot=ws.reduce((a,b)=>a+b,0)+track*(ch.length-1);let cx=x-tot/2;
+  ch.forEach((c,i)=>{const p=outCubic(seg(t,t0+i*step,t0+i*step+.5));
+    if(p>0){const a0=ctx.globalAlpha;ctx.save();ctx.globalAlpha=a0*p;ctx.shadowColor=glow;ctx.shadowBlur=size*blur;ctx.fillStyle=color;ctx.fillText(c,cx,y+(1-p)*size*rise);ctx.restore()}
+    cx+=ws[i]+track});
+}
+function vtext(str,x,y,t0,t,{size=40,color=IVORY,step=.09,gap=1.18}={}){
+  ctx.font=`500 ${size}px ${SERIF}`;ctx.textBaseline='middle';ctx.textAlign='center';
+  [...str].forEach((c,i)=>{const p=outCubic(seg(t,t0+i*step,t0+i*step+.6));if(p<=0)return;
+    const pun='、。'.includes(c),cx=x+(pun?size*.38:0),cy=y+i*size*gap-(pun?size*.38:0)-(1-p)*size*.4;
+    const a0=ctx.globalAlpha;ctx.save();ctx.globalAlpha=a0*p;ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=size*.4;ctx.fillStyle=color;ctx.fillText(c,cx,cy);ctx.restore()});
+  ctx.textAlign='left';
+}
+// ── 図形 ──
+function fill(c){ctx.fillStyle=c;ctx.fillRect(0,0,W,H)}
+function grad(c0,c1){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,c0);g.addColorStop(1,c1);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+function radial(cx,cy,r,c0,c1){const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,c0);g.addColorStop(1,c1);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+function motes(t,n,color,vy,seed){const a0=ctx.globalAlpha;for(let i=0;i<n;i++){const x=(rnd(i+seed)*W+Math.sin(t*.6+i)*24+W)%W,y=((rnd(i*3+seed)*H-t*vy*(.4+rnd(i*7+seed)))%H+H)%H;
+  ctx.globalAlpha=a0*clamp(.25+.5*Math.sin(t*1.8+i*1.7));ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,.8+rnd(i*5+seed)*1.8,0,7);ctx.fill()}ctx.globalAlpha=a0}
+// 線を引きながら描く（p=0→1）
+function drawOn(p,fn,len=3000){ctx.save();ctx.setLineDash([len,len]);ctx.lineDashOffset=len*(1-p);ctx.beginPath();fn();ctx.stroke();ctx.restore()}
+// 茨の蔓（棘つきの螺旋）
+function vine(cx,cy,a0,r0,r1,p,color){
+  const pts=[];for(let r=r0;r<=r0+(r1-r0)*p;r+=4){const a=a0+r*.011+Math.sin(r*.025)*.18;pts.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r,a])}
+  if(pts.length<2)return;ctx.strokeStyle=color;ctx.lineWidth=1.4;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();
+  ctx.fillStyle=color;for(let i=6;i<pts.length;i+=7){const[x,y,a]=pts[i],sgn=i%14?1:-1,nx=Math.cos(a+sgn*Math.PI/2),ny=Math.sin(a+sgn*Math.PI/2);
+    ctx.beginPath();ctx.moveTo(x-Math.cos(a)*3,y-Math.sin(a)*3);ctx.lineTo(x+Math.cos(a)*3,y+Math.sin(a)*3);ctx.lineTo(x+nx*9,y+ny*9);ctx.fill()}
+}
+function rose(cx,cy,R,rot,p,color){
+  ctx.strokeStyle=color;ctx.lineWidth=1.2;
+  [[1,4,0],[.66,3,.4],[.38,5,1.1]].forEach(([k,n,o],j)=>{ctx.beginPath();const end=Math.PI*2*clamp(p*1.4-j*.2);
+    for(let a=0;a<=end;a+=.02){const r=R*k*(.55+.45*Math.abs(Math.cos(n*a/2))),x=cx+Math.cos(a+rot*(j%2?-1:1)+o)*r,y=cy+Math.sin(a+rot*(j%2?-1:1)+o)*r;a?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke()});
+}
+// 沈む山並み
+function ridge(seed,base,amp,color,n=9){ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,H);
+  for(let i=0;i<=n;i++){const x=i/n*W,peak=i%2?base-amp*(.4+rnd(i+seed)*.6):base-amp*.1*rnd(i*3+seed);ctx.lineTo(x+(rnd(i*7+seed)-.5)*60,peak)}
+  ctx.lineTo(W,H);ctx.fill()}
+// 巨人の影
+function giant(cx,base,s,glow){ctx.save();ctx.shadowColor=glow;ctx.shadowBlur=40;ctx.fillStyle='#040002';ctx.beginPath();
+  ctx.ellipse(cx,base-s*1.55,s*.17,s*.22,0,0,7);ctx.moveTo(cx-s*.1,base-s*1.35);ctx.lineTo(cx-s*.55,base-s*1.2);ctx.quadraticCurveTo(cx-s*.72,base-s*1.1,cx-s*.7,base-s*.7);
+  ctx.lineTo(cx-s*.62,base-s*.1);ctx.lineTo(cx-s*.5,base);ctx.lineTo(cx+s*.5,base);ctx.lineTo(cx+s*.62,base-s*.1);ctx.lineTo(cx+s*.7,base-s*.7);
+  ctx.quadraticCurveTo(cx+s*.72,base-s*1.1,cx+s*.55,base-s*1.2);ctx.lineTo(cx+s*.1,base-s*1.35);ctx.fill();ctx.restore()}
+
+// ── 各ショット ──
+function shot1(t){ // 恋歌：五線が海の水平線になる
+  fill('#050409');const p=inOut(seg(t,.15,1.7)),amp=lerp(0,10,seg(t,.8,2.6));
+  ctx.strokeStyle=GOLD;ctx.lineWidth=1;
+  for(let i=0;i<5;i++){ctx.globalAlpha=.75;ctx.beginPath();const y0=H/2+(i-2)*14;
+    for(let x=W/2-W/2*p;x<=W/2+W/2*p;x+=6){const y=y0+Math.sin(x*.012+t*1.6+i*.7)*amp*(.4+i*.15);x===W/2-W/2*p?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.stroke()}
+  ctx.globalAlpha=1;
+  const r=seg(t,1.5,2.6);if(r>0)for(let k=0;k<3;k++){const q=clamp(r*1.4-k*.2);ctx.globalAlpha=(1-q)*.8;ctx.strokeStyle=CRIMSON;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(W/2,H/2,q*420,q*60,0,0,7);ctx.stroke()}
+  ctx.globalAlpha=1;if(t>1.5){ctx.fillStyle='#d01a35';ctx.beginPath();ctx.arc(W/2,H/2,4*(1-seg(t,1.5,2.4))+1.5,0,7);ctx.fill()}
+  htext('恋　歌',W/2,H/2-92,.7,t,{size:22,color:IVORY,track:10,step:.12});
+  htext('ミ　ン　ネ　ザ　ン　グ',W/2,H/2+92,1.0,t,{size:13,color:GOLD,font:SANS,track:2,step:.05,weight:'400'});
+}
+function shot2(t){ // 沈んだ世界
+  grad('#0b1330','#020309');motes(t,60,'#cfd8ff',2,4);
+  ctx.save();ctx.globalAlpha*=.9;ctx.fillStyle='#e9e2cf';ctx.beginPath();ctx.arc(W*.24,H*.27,34,0,7);ctx.fill();ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(W*.24+14,H*.27-6,32,0,7);ctx.fill();ctx.restore();
+  ridge(11,H*.62,250,'#1a2140',7);ridge(23,H*.72,220,'#10152c',9);ridge(37,H*.8,170,'#0a0d1d',11);
+  const wy=lerp(H*.86,H*.66,inOut(seg(t,2.5,4.2)));
+  const g=ctx.createLinearGradient(0,wy,0,H);g.addColorStop(0,'rgba(10,18,44,.96)');g.addColorStop(1,'#010207');ctx.fillStyle=g;ctx.fillRect(0,wy,W,H-wy);
+  const a0=ctx.globalAlpha;for(let i=0;i<26;i++){const y=wy+4+i*i*.55,w=lerp(80,600,rnd(i))*(1-i/30);ctx.globalAlpha=a0*.25*(1-i/26);ctx.fillStyle=IVORY;ctx.fillRect(W*.24-w/2+Math.sin(t*2+i)*14,y,w,1)}
+  ctx.globalAlpha=a0*.6;ctx.fillStyle=IVORY;ctx.fillRect(0,wy,W,1);ctx.globalAlpha=a0;
+  vtext('海が、山を呑んだ。',W-230,BAR+110,2.7,t,{size:40});
+}
+// 五線を輪にして心臓を囲む（恋歌が記憶をつなぎとめる）
+function staffRing(cx,cy,R,t,p){ctx.strokeStyle=GOLD;ctx.lineWidth=1;for(let i=0;i<5;i++){const a0=ctx.globalAlpha;ctx.globalAlpha=a0*.7;ctx.beginPath();
+  for(let a=0;a<=Math.PI*2*p;a+=.02){const r=R+i*9+Math.sin(a*6+t*2+i*.7)*3,x=cx+Math.cos(a-Math.PI/2)*r,y=cy+Math.sin(a-Math.PI/2)*r;a?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();ctx.globalAlpha=a0}}
+function shot3(t){ // 心臓の叙任、恋歌
+  fill('#070205');const pb=pulse(t);radial(W/2,H/2,520+pb*60,`rgba(120,10,30,${.35+pb*.25})`,'rgba(0,0,0,0)');
+  const p=seg(t,4.4,6.2);for(let v=0;v<6;v++)vine(W/2,H/2,v*Math.PI/3+t*.05,120,560,outCubic(clamp(p*1.3-v*.05)),'rgba(201,164,92,.55)');
+  rose(W/2,H/2,110+pb*8,t*.25,outCubic(p),GOLD);staffRing(W/2,H/2,150,t,inOut(seg(t,6.6,7.8)));
+  ctx.fillStyle='#d01a35';ctx.beginPath();ctx.arc(W/2,H/2,8+pb*10,0,7);ctx.fill();
+  const a0=ctx.globalAlpha;ctx.globalAlpha=a0*(1-seg(t,6.3,6.6));
+  htext('騎士は、最愛の人を',W/2,BAR+70,4.6,t,{size:30,track:4,step:.05});
+  htext('城の心臓に捧げる。',W/2,H-BAR-70,5.25,t,{size:44,track:8,step:.06,color:'#f5d9d9',glow:'rgba(200,20,50,.9)',blur:.6});
+  ctx.globalAlpha=a0*(1-seg(t,8.1,8.4));
+  htext('恋歌だけが、',W/2,BAR+70,6.75,t,{size:30,track:6,step:.06,color:'#f3e2b8'});
+  htext('姫に、人であった日々をつなぎとめる。',W/2,H-BAR-70,7.2,t,{size:34,track:4,step:.035,color:'#f3e2b8',glow:'rgba(201,164,92,.6)',blur:.5});
+  ctx.globalAlpha=a0;
+}
+function shot5(t){ // 歌が途絶える：冒頭の五線が切れ、心臓の灯が消える
+  fill('#050409');const snap=seg(t,9,9.9),gap=outCubic(snap)*90;
+  ctx.strokeStyle=GOLD;ctx.lineWidth=1;
+  for(let i=0;i<5;i++){const y0=H/2+(i-2)*14;[-1,1].forEach(side=>{const a0=ctx.globalAlpha;ctx.globalAlpha=a0*.75*(1-snap*.8);ctx.beginPath();
+    for(let d=gap;d<=W/2;d+=6){const x=W/2+side*d,fall=Math.pow(snap,1.4)*(110+i*25)*Math.pow(1-(d-gap)/(W/2-gap),2.2),y=y0+Math.sin(x*.012+t*1.6+i*.7)*6*(1-snap)+fall;
+      d===gap?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.stroke();ctx.globalAlpha=a0})}
+  // 切れた瞬間の火花
+  if(t>9&&t<9.5){const k=seg(t,9,9.5);for(let j=0;j<14;j++){const a=rnd(j)*Math.PI*2,r=k*120*(.4+rnd(j+3));ctx.fillStyle=GOLD;const a0=ctx.globalAlpha;ctx.globalAlpha=a0*(1-k);ctx.fillRect(W/2+Math.cos(a)*r,H/2+Math.sin(a)*r*.5,2,2);ctx.globalAlpha=a0}}
+  const lit=1-seg(t,9,9.6);ctx.fillStyle=`rgb(${lerp(70,208,lit)|0},${lerp(64,26,lit)|0},${lerp(70,53,lit)|0})`;ctx.beginPath();ctx.arc(W/2,H/2,3+lit*2,0,7);ctx.fill();
+  htext('歌が途絶えた姫は、',W/2,H/2-96,8.5,t,{size:30,track:6,step:.05});
+  htext('自分が誰だったかを、忘れる。',W/2,H/2+150,9.2,t,{size:34,track:6,step:.05,color:'#b8b0a8'});
+}
+function shot6(t){ // 血の海から巨人：かつて誰かの姫だったもの
+  fill('#0e0106');const hor=H*.56;radial(W/2,hor,700,'rgba(120,8,24,.55)','rgba(0,0,0,0)');
+  const rise=outCubic(seg(t,10,11.4)),shake=t>12.02&&t<12.5?(rnd(Math.floor(t*60))-.5)*24*(1-seg(t,12.02,12.5)):0,gb=GIANT.reduce((s,[b])=>s+(t>=b?Math.exp(-(t-b)*5):0),0);
+  ctx.save();ctx.translate(shake,shake*.4);
+  const base=hor+lerp(300,70,rise);giant(W*.66,base,210,`rgba(${200+gb*55|0},30,50,${.5+gb*.4})`);
+  const eye=seg(t,10.9,11.2)*(1-seg(t,12.02,12.1));if(eye>0){const ey=base-210*1.57,a0=ctx.globalAlpha;ctx.fillStyle='#ff2340';ctx.shadowColor='#ff2340';ctx.shadowBlur=18;ctx.globalAlpha=a0*eye;[-1,1].forEach(d=>{ctx.beginPath();ctx.ellipse(W*.66+d*13,ey,6,2.2,0,0,7);ctx.fill()});ctx.globalAlpha=a0;ctx.shadowBlur=0}
+  ctx.fillStyle='#14020a';ctx.fillRect(0,hor,W,H-hor);
+  for(let i=0;i<34;i++){const y=hor+Math.pow(i/34,1.8)*(H-hor),a=.15+.5*(i/34);ctx.strokeStyle=`rgba(${150+i*2},${10+i},${30},${a})`;ctx.lineWidth=.8+i*.06;ctx.beginPath();
+    for(let x=0;x<=W;x+=16){const yy=y+Math.sin(x*(.01-i*.0002)+t*(1.2+i*.03)+i)*(1+i*.18);x?ctx.lineTo(x,yy):ctx.moveTo(x,yy)}ctx.stroke()}
+  ctx.restore();
+  htext('ネ フ ェ リ ム',W*.3,BAR+62,10.3,t,{size:16,color:'#d0566a',font:SANS,track:4,step:.05,weight:'500'});
+  htext('かつて、誰かの姫だったもの。',W*.3,BAR+110,10.6,t,{size:32,track:4,step:.06,color:'#f0d6d6'});
+  // 十字架の杭が走る
+  const sp=seg(t,11.85,12.02);if(sp>0&&sp<1){ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.shadowColor='#ff3b55';ctx.shadowBlur=30;ctx.beginPath();
+    ctx.moveTo(lerp(-100,W*.66,sp)-260,lerp(H+60,H*.42,sp)+150);ctx.lineTo(lerp(-100,W*.66,sp),lerp(H+60,H*.42,sp));ctx.stroke();ctx.restore()}
+  const f=1-seg(t,12.02,12.3);if(t>=12.02&&f>0){const a0=ctx.globalAlpha;ctx.globalAlpha=a0*f;fill('#fff');ctx.globalAlpha=a0}
+}
+function shot7(t){ // 刻めよ、我が名を
+  const lt=t-12.22;fill(CRIMSON);
+  ctx.save();ctx.globalAlpha*=.18;ctx.strokeStyle='#fff';ctx.lineWidth=1;for(let i=0;i<40;i++){const y=(i*37+lt*900)%H;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y-160);ctx.stroke()}ctx.restore();
+  const s=1.25-.25*outExpo(seg(lt,0,.35));ctx.save();ctx.translate(W/2,H/2);ctx.scale(s,s);
+  ctx.font=`800 120px ${SERIF}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.35)';ctx.shadowBlur=20;ctx.fillText('刻めよ、我が名を',0,-10);ctx.restore();ctx.textAlign='left';
+  htext('ミラルカ辺境伯　〈ジョスト〉',W/2,H/2+100,12.45,t,{size:20,font:SANS,track:4,step:.015,glow:'rgba(0,0,0,0)'});
+}
+function shot8(t){ // 題名、そして眠らせる歌
+  fill('#040309');radial(W/2,H/2,600,'rgba(30,22,60,.6)','rgba(0,0,0,0)');motes(t,70,'#e8c87a',8,31);
+  const fp=inOut(seg(t,13.35,14.6)),fx=480,fy=150,a0=ctx.globalAlpha;ctx.strokeStyle=GOLD;ctx.globalAlpha=a0*.7;ctx.lineWidth=1;
+  drawOn(fp,()=>{ctx.rect(W/2-fx,H/2-fy,fx*2,fy*2)},(fx+fy)*4);drawOn(fp,()=>{ctx.rect(W/2-fx-8,H/2-fy-8,fx*2+16,fy*2+16)},(fx+fy+16)*4);ctx.globalAlpha=a0;
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy])=>{rose(W/2+sx*fx,H/2+sy*fy,18,t*.4,seg(t,14.2,15.2),GOLD);vine(W/2+sx*fx,H/2+sy*fy,Math.atan2(-sy,-sx)+.6,20,90,seg(t,14.4,15.4),'rgba(201,164,92,.6)')});
+  htext('第一歌　血海の誓い',W/2,H/2-90,13.7,t,{size:20,color:GOLD,font:SANS,track:6,step:.04,weight:'400'});
+  const rv=inOut(seg(t,13.9,15.1));ctx.save();ctx.beginPath();ctx.rect(0,0,W*rv*1.1-60,H);ctx.clip();
+  htext('海城のミンネザング',W/2,H/2,0,99,{size:80,track:14,weight:'600',color:IVORY,glow:'rgba(201,164,92,.6)',blur:.35});ctx.restore();
+  if(rv>0&&rv<1){const x=W*rv*1.1-60;const g=ctx.createLinearGradient(x-80,0,x+10,0);g.addColorStop(0,'rgba(255,230,170,0)');g.addColorStop(1,'rgba(255,230,170,.7)');ctx.fillStyle=g;ctx.fillRect(x-80,H/2-60,90,120)}
+  htext('M I N N E S A N G',W/2,H/2+82,14.9,t,{size:12,color:'#9d9480',font:SANS,track:6,step:.03,weight:'400'});
+  htext('討つことは、ひとりの姫を眠らせること。',W/2,H/2+196,15.6,t,{size:22,color:'#d9d0bf',track:4,step:.045});
+}
+
+// ── 合成：鼓動で画面が縮み、ふちが深紅に沈む。粒子ノイズと黒帯 ──
+const grain=document.createElement('canvas');grain.width=grain.height=256;{const g=grain.getContext('2d'),d=g.createImageData(256,256);for(let i=0;i<d.data.length;i+=4){const v=Math.random()*255;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}g.putImageData(d,0,0)}
+const fade=(t,a,fn)=>{ctx.save();ctx.globalAlpha=seg(t,a,a+.2);fn(t);ctx.restore()};
+function draw(t){
+  const pb=pulse(t),sq=1-.022*pb;
+  ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;fill('#000');ctx.save();ctx.translate(W/2,H/2);ctx.scale(sq,sq);ctx.translate(-W/2,-H/2);
+  if(t<2.6)shot1(t);
+  if(t>=2.4&&t<4.6)fade(t,2.4,shot2);
+  if(t>=4.4&&t<8.4)fade(t,4.4,shot3);
+  if(t>=8.4&&t<10.1)shot5(t);
+  if(t>=9.9&&t<12.22)fade(t,9.9,shot6);
+  if(t>=12.22&&t<13.3)shot7(t);
+  if(t>=13.2)fade(t,13.2,shot8);
+  ctx.restore();
+  // 鼓動のふち（巨人の鼓動は暗く濁る）
+  const e=clamp(pb*.6);if(e>.01){const g=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.95);g.addColorStop(0,'rgba(90,0,15,0)');g.addColorStop(1,`rgba(90,0,15,${e})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+  const v=ctx.createRadialGradient(W/2,H/2,H*.45,W/2,H/2,H*1.05);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.6)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+  ctx.save();ctx.globalAlpha=.06;ctx.globalCompositeOperation='overlay';ctx.fillStyle=ctx.createPattern(grain,'repeat');ctx.translate(rnd(Math.floor(t*24))*256,rnd(Math.floor(t*24)+9)*256);ctx.fillRect(-256,-256,W+512,H+512);ctx.restore();
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,BAR);ctx.fillRect(0,H-BAR,W,BAR);
+  ctx.globalAlpha=clamp(1-seg(t,0,.3)+seg(t,DUR-.45,DUR));if(ctx.globalAlpha>0)fill('#000');ctx.globalAlpha=1;
+}
+
+function audioInit(){if(ac)return;ac=new AudioContext();master=ac.createGain();master.gain.value=.8;const comp=ac.createDynamicsCompressor();master.connect(comp);comp.connect(ac.destination);dest=ac.createMediaStreamDestination();comp.connect(dest)}
+
+// ── 再生・録画 ──
+let dest=null,t0=0,playing=false,fixed=null,still=16.2;
+const q=new URLSearchParams(location.search);if(q.has('t'))fixed=+q.get('t');
+function now(){return fixed!=null?fixed:playing?ac.currentTime-t0:still}
+function frame(){const t=now();draw(Math.min(t,DUR));if(playing&&t>=DUR){playing=false;still=DUR}
+  if(!playing&&fixed==null&&t<DUR+1){ctx.fillStyle='rgba(239,230,210,.75)';ctx.font=`400 14px ${SANS}`;ctx.textAlign='center';ctx.fillText(still>=DUR?'クリックでもう一度':'クリックで再生（音が出ます）',W/2,H-BAR/2);ctx.textAlign='left'}
+  requestAnimationFrame(frame)}
+async function play(){audioInit();await ac.resume();fixed=null;t0=ac.currentTime+.15;score(t0);playing=true;return t0}
+cv.onclick=document.getElementById('play').onclick=()=>{if(!playing)play()};
+document.getElementById('rec').onclick=async()=>{
+  const btn=document.getElementById('rec'),msg=document.getElementById('msg');
+  const type=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
+  if(!type||playing){msg.textContent=type?'再生が終わってから押してください':'このブラウザは録画（MediaRecorder）に対応していません';return}
+  audioInit();await ac.resume();
+  const stream=new MediaStream([...cv.captureStream(60).getVideoTracks(),...dest.stream.getAudioTracks()]);
+  const rec=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:14e6}),chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  rec.onstop=()=>{const ext=type.startsWith('video/mp4')?'mp4':'webm',url=URL.createObjectURL(new Blob(chunks,{type}));msg.innerHTML=`録画しました：<a href="${url}" download="minnezang-image.${ext}">minnezang-image.${ext} を保存</a>`;btn.disabled=false};
+  btn.disabled=true;msg.textContent='録画中…';rec.start();await play();setTimeout(()=>rec.stop(),(DUR+.4)*1000);
+};
+document.getElementById('wav').onclick=async()=>{const msg=document.getElementById('msg');msg.textContent='書き出し中…';
+  const url=URL.createObjectURL(await renderWav());msg.innerHTML=`書き出しました：<a href="${url}" download="minnezang-image-bgm.wav">minnezang-image-bgm.wav を保存</a>`};
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
