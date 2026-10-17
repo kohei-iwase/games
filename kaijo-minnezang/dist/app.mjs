@@ -1,4 +1,4 @@
-import {Battle,FORMATIONS,SKILLS,DIFFICULTY,WIDTH,HEIGHT,FLAGSHIP,SHOALS,KNIGHTS,ESCORT,simulate,swarmAlive} from './battle.mjs';
+import {Battle,FORMATIONS,SKILLS,DIFFICULTY,WIDTH,HEIGHT,FLAGSHIP,SHOALS,CLASSES,shipSpec,fullName,simulate,swarmAlive} from './battle.mjs';
 import {epilogue,loadRecords,saveRecord,difficultyName,battleVerdict,strategyReport,strategyHints} from './campaign.mjs';
 import {Strategy,MAP,LAMP,SHOALS as MAP_SHOALS,ISLETS} from './strategy.mjs';
 import {FLEET_COLOR,shipMaxHp} from './mapscene3d.mjs';
@@ -25,8 +25,8 @@ const fleetOf=()=>st.fleet(enc.fleetId),foeOf=()=>st.enemy(enc.enemyId),hasLance
 const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
 // カットインの立ち絵。ない騎士は紋章だけを出す。
 const PORTRAITS={stake:'./art/kanaan.png',lance:'./art/miralka.png',guard:'./art/olive.png'};for(const src of Object.values(PORTRAITS))new Image().src=src;
-const crest=s=>SKILLS[s.kind]?.crest||'◈',pct=n=>Math.round(n*100)+'%';
-function build(){ $('#shipList').innerHTML=b.ships.map(s=>`<button class="member" data-ship="${s.id}" tabindex="-1" style="--ship-color:${s.color}"><span class="member-crest">${crest(s)}</span><span class="member-body"><span class="member-name"><strong>${s.name}</strong><span id="${s.id}-hp"></span></span><span class="bar hp"><i id="${s.id}-hpbar"></i></span><span class="bar blood"><i id="${s.id}-bloodbar"></i></span><span class="member-foot"><span id="${s.id}-status"></span><span id="${s.id}-blood"></span></span></span></button>`).join('')}
+const CLASS_CREST={retinue:'▣',hunter:'✣',executor:'✝'},crest=s=>SKILLS[s.kind]?.crest||CLASS_CREST[s.cls]||'◈',pct=n=>Math.round(n*100)+'%';
+function build(){ $('#shipList').innerHTML=b.ships.map(s=>`<button class="member" data-ship="${s.id}" tabindex="-1" style="--ship-color:${s.color}"><span class="member-crest">${crest(s)}</span><span class="member-body"><span class="member-name"><strong>${fullName(s)}</strong><span id="${s.id}-hp"></span></span><span class="bar hp"><i id="${s.id}-hpbar"></i></span><span class="bar blood"><i id="${s.id}-bloodbar"></i></span><span class="member-foot"><span id="${s.id}-status"></span><span id="${s.id}-blood"></span></span></span></button>`).join('')}
 // 流れの切り替え。newGame=最初から、toMap=戦略マップ（ポーズ状態）、toPrep=接触した戦闘の出撃準備、launch=出撃（観戦／完全スキップ）、toResult=結果、backToMap=戦闘の結果を戦略へ反映、finish=戦略の決着。
 function newGame(){st=new Strategy();history=[];fleetSel='main';mapSpeed=1;report=null;toMap()}
 function toMap(){story=null;phase='map';enc=null;contactAt=0;finishAt=0;fleetKey='';mapLogKey=null;st.paused=true;$('#contact').hidden=true;ui()}
@@ -51,10 +51,10 @@ const gaugeHTML=(d,t,mid)=>{const w=n=>Math.min(100,n*200).toFixed(1);return `<d
 // 準備画面：陣形とスキルの順番を選び、予測を表示する。艦隊ごとに fleet.formation / fleet.skillOrder へ保存する。変えるたびに110ms待ってから試算し直す。
 function prepUI(){const f=fleetOf(),e=foeOf(),o=f.skillOrder,has=id=>b.ships.some(s=>s.id===id),combo=has('stake')&&has('lance')&&o.indexOf('stake')>=0&&o.indexOf('lance')===o.indexOf('stake')+1,even=e.kind!=='nephilim';
  $('#prepTitle').textContent=`${f.name}　対　${e.name}`;$('#prepOdds').textContent=even?'同格':'格上';$('#prepOdds').classList.toggle('even',even);$('#prepEnemy').textContent=e.name;$('#prepHpBar').style.width=e.hp/e.maxHp*100+'%';$('#prepHpText').textContent=`${Math.ceil(e.hp)} / ${e.maxHp}`;
- $('#prepFleet').innerHTML=b.ships.map(s=>`<div class="fleet-ship" style="--ship-color:${s.color}"><span class="member-crest">${crest(s)}</span><span class="fleet-name"><b>${esc(s.name)}</b><small>耐久 ${Math.ceil(s.hp)} / ${s.maxHp}</small></span></div>`).join('');
+ $('#prepFleet').innerHTML=b.ships.map(s=>`<div class="fleet-ship" style="--ship-color:${s.color}"><span class="member-crest">${crest(s)}</span><span class="fleet-name"><b>${esc(fullName(s))}</b><small>耐久 ${Math.ceil(s.hp)} / ${s.maxHp}</small></span></div>`).join('');
  $('#prepFormations').innerHTML=Object.entries(FORMATIONS).map(([k,x])=>`<button data-form="${k}" class="${f.formation===k?'selected':''}" aria-pressed="${f.formation===k}" title="${x.note}"><b>${x.name}</b><small>${x.note.split('。').pop()}</small></button>`).join('');$('#prepFormNote').textContent=FORMATIONS[f.formation].note;
- $('#prepSkills').innerHTML=b.ships.filter(s=>SKILLS[s.id]).map(s=>{const i=o.indexOf(s.id);return `<button class="skill-card${i>=0?' on':''}" data-skill="${s.id}" aria-pressed="${i>=0}" style="--ship-color:${s.color}"><span class="skill-card-crest">${SKILLS[s.id].crest}</span><b>〈${SKILLS[s.id].name}〉</b><small>${esc(s.name)}</small><i>${i>=0?`${i+1}番目`:'使わない'}</i></button>`}).join('');
- $('#prepCombo').textContent=!hasLance()?'この艦隊にジョストはありません。戦闘は観戦でも完全にオートで進みます。':combo?'連携〈杭と十字架の馬上槍試合〉が成立する順です。':'縫い留め→ジョストの順だと連携〈杭と十字架の馬上槍試合〉。';$('#prepCombo').classList.toggle('active',combo)}
+ $('#prepSkills').innerHTML=b.ships.filter(s=>SKILLS[s.id]).map(s=>{const i=o.indexOf(s.id);return `<button class="skill-card${i>=0?' on':''}" data-skill="${s.id}" aria-pressed="${i>=0}" style="--ship-color:${s.color}"><span class="skill-card-crest">${SKILLS[s.id].crest}</span><b>〈${SKILLS[s.id].name}〉</b><small>${esc(fullName(s))}</small><i>${i>=0?`${i+1}番目`:'使わない'}</i></button>`}).join('');
+ $('#prepCombo').textContent=!hasLance()?'この艦隊にジョストはありません。戦闘は観戦でも完全にオートで進みます。':combo?'連携〈杭と十字架の馬上槍試合〉が成立する順です。':has('stake')?'バラージ→ジョストの順だと連携〈杭と十字架の馬上槍試合〉。':'連携〈杭と十字架の馬上槍試合〉は、バラージを持つカナンと同じ艦隊のときに使えます。';$('#prepCombo').classList.toggle('active',combo)}
 function schedulePredict(){predResult=null;predUI();clearTimeout(predTimer);const tok=++predToken;predTimer=setTimeout(()=>{if(!enc)return;const r=st.predictFor(enc);if(tok===predToken){predResult=r;predUI()}},110)}
 const outlook=p=>p.normal.win>=.67?'優勢':p.normal.win>0?'五分':p.perfect.win>=.67?'会心で優勢':p.perfect.win>0?'会心で五分':'劣勢';
 function predUI(){const el=$('#prepPredict');if(!predResult){el.innerHTML='<p class="calc">試算中…</p>';return}const {normal:n,perfect:c}=predResult,rg=a=>a[0]===a[1]?`${a[0]}`:`${a[0]}〜${a[1]}`,out=outlook(predResult),tone=out==='優勢'?'good':out==='劣勢'?'bad':'mid';
@@ -110,7 +110,7 @@ function mapUI(){
  $('#tacPause').hidden=!(phase==='map'&&st.paused&&live);$('#tacHint').textContent='Spaceで進行 ／ 艦隊を選び、海面で移動・敵で追跡';
  $('#mapPlay').textContent=st.paused?'進行 ［Space］':'ポーズ ［Space］';$('#mapPlay').disabled=!live;$('#mapStop').disabled=!sel||!sel.target;$('#mapSpeed').textContent=`×${mapSpeed}`;
  const key=st.fleets.map(f=>`${f.id}:${f.id===fleetSel}:${fleetState(f)}:${f.ships.map(s=>Math.ceil(s.hp)).join(',')}`).join('|');
- if(key!==fleetKey){fleetKey=key;$('#fleetList').innerHTML=st.fleets.map(f=>`<button class="member fleet-card${f.id===fleetSel?' selected':''}" data-fleet="${f.id}" tabindex="-1" aria-pressed="${f.id===fleetSel}" style="--ship-color:${FLEET_COLOR[f.id]||'#d23a54'}"><span class="fleet-head"><strong>${esc(f.name)}</strong><small>${fleetState(f)}</small></span><span class="fleet-ships">${f.ships.map(s=>{const k=KNIGHTS[s.type]||ESCORT;return `<span class="mini-ship" title="${esc(k.name)}" style="--ship-color:${k.color}"><span class="member-crest">${SKILLS[s.type]?.crest||'◈'}</span><span class="bar hp"><i style="width:${s.hp/shipMaxHp(s.type)*100}%"></i></span><small>${Math.ceil(s.hp)}</small></span>`}).join('')}</span></button>`).join('')}
+ if(key!==fleetKey){fleetKey=key;$('#fleetList').innerHTML=st.fleets.map(f=>`<button class="member fleet-card${f.id===fleetSel?' selected':''}" data-fleet="${f.id}" tabindex="-1" aria-pressed="${f.id===fleetSel}" style="--ship-color:${FLEET_COLOR[f.id]||'#d23a54'}"><span class="fleet-head"><strong>${esc(f.name)}</strong><small>${fleetState(f)}</small></span><span class="fleet-ships">${f.ships.map(s=>{const k=shipSpec(s.type);return `<span class="mini-ship" title="${esc(k.named?fullName(k):CLASSES[k.cls].name)}" style="--ship-color:${k.color}"><span class="member-crest">${SKILLS[s.type]?.crest||CLASS_CREST[k.cls]||'◈'}</span><span class="bar hp"><i style="width:${s.hp/shipMaxHp(s.type)*100}%"></i></span><small>${Math.ceil(s.hp)}</small></span>`}).join('')}</span></button>`).join('')}
  if(st.log[0]!==mapLogKey){mapLogKey=st.log[0];$('#logList').innerHTML=st.log.slice(0,4).map(l=>`<div class="log-entry"><time>${clock(l.time)}</time><span>${esc(l.text)}</span></div>`).join('')}
  $('#chartTip').textContent='海域全図 · クリックで移動・追跡';drawMapChart()}
 const fleetState=f=>Math.hypot(f.x-LAMP.x,f.y-LAMP.y)<=LAMP.r+60?'補給圏':f.target?.enemyId?'追跡中':f.target?'移動中':'待機';
@@ -184,4 +184,4 @@ function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);l
  if(talk.active);else if(inMap())renderer?.renderMap(st,{selected:fleetSel});else renderer?.render(b,b.flag().id,false);requestAnimationFrame(frame)}
 Object.defineProperty(window,'__st',{get:()=>st});Object.defineProperty(window,'__battle',{get:()=>b});
 build();recordUI();ui();requestAnimationFrame(frame);// 起動のたびに、姫の姿の選択 → プロローグ（途中で名前入力）→ 戦略マップ。名前はプロローグで付け直す。
-talk.pickForm(()=>{hero.setName('');scene('prologue',toMap)});
+talk.pickForm(()=>{hero.setName('');scene('prologue',()=>scene('join-kanaan',toMap))});
