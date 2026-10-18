@@ -2,7 +2,7 @@
 import {shipSpec,SKILLS,predict} from './battle.mjs';
 export const MAP={w:3000,h:2000};
 // 守る島。補給地を兼ねる。
-export const LAMP={x:200,y:1000,r:90,name:'峰の灯'};
+export const LAMP={x:200,y:1000,r:90,name:'ヨスガの灯台'};
 // 浅瀬：敵の中心が円内にいる間、ネフェリムは速度×0.35、眷属は×0.7。自軍は影響なし。
 export const SHOALS=[{x:1300,y:900,r:180},{x:1700,y:1400,r:160},{x:1600,y:500,r:150},{x:900,y:1450,r:120}];
 // 小島：通れない。
@@ -45,7 +45,7 @@ export class Strategy{
   const kin=(id,x,y,ai,delay=0)=>({id,kind:'kin',name:'眷属の群れ',hp:420,maxHp:420,x,y,speed:34,ai,active:!delay,delay,siege:false});
   this.enemies=[{id:'nephilim',kind:'nephilim',name:'ネフェリム',hp:2250,maxHp:2250,x:2750,y:1000,speed:22,ai:'lamp',active:true,delay:0,siege:false},
    kin('kin1',2600,500,'lamp'),kin('kin2',2550,1550,'hunt'),kin('kin3',2900,1300,'lamp',40)];
-  this.note('第一歌「血海の誓い」：ネフェリムの艦隊が峰の灯を目指している。');
+  this.note('第一歌「血海の誓い」：ネフェリムの艦隊がヨスガの灯台を目指している。');
  }
  note(text){this.log.unshift({time:this.time,text});this.log.length=Math.min(this.log.length,100)}
  fleet(id){return this.fleets.find(f=>f.id===id)}
@@ -96,7 +96,7 @@ export class Strategy{
   if(this.result)return;
   const end=(r,why)=>{this.result=r;this.reason=why;this.paused=true;this.note(why)};
   if(!this.enemy('nephilim'))end('victory','ネフェリム撃破');
-  else if(this.lamp.hp<=0)end('defeat','峰の灯が消えた');
+  else if(this.lamp.hp<=0)end('defeat','ヨスガの灯台の灯が消えた');
   else if(!this.fleets.some(f=>f.ships.some(s=>s.type==='lance')))end('defeat',this.fleets.length?'ミラルカ、戦闘不能':'自軍の艦隊が全滅');
  }
  // 戦闘への受け渡し。艦の対応は編成順（battleIds）。

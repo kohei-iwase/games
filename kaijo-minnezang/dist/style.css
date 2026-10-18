@@ -299,7 +299,7 @@ body[data-view="map"] #chart{aspect-ratio:3/2}
 body[data-story="on"] .mapbar,body[data-story="on"] .fleet-roster,body[data-story="on"] .map-ctl,body[data-story="on"] .tac-pause{opacity:.25;pointer-events:none}
 .mapbar{position:absolute;top:var(--pad);left:50%;transform:translateX(-50%);width:min(520px,50vw);gap:5px;padding:7px 14px 6px;z-index:10;pointer-events:none;background:linear-gradient(90deg,transparent,#0c0814d8 10%,#0c0814d8 90%,transparent);border-top:1px solid #e2c07a66;border-bottom:1px solid #e2c07a66}
 .mapbar-name,.mapbar-val{white-space:nowrap}
-.mapbar-row{display:grid;grid-template-columns:6.4em 1fr 6.4em;align-items:center;gap:8px;font-size:11px}.mapbar-name{font:700 11px/1 var(--serif);letter-spacing:.14em;text-align:right}.mapbar-val{font-size:10.5px;color:#d6dde0;font-variant-numeric:tabular-nums}
+.mapbar-row{display:grid;grid-template-columns:7.6em 1fr 6.4em;align-items:center;gap:8px;font-size:11px}.mapbar-name{font:700 11px/1 var(--serif);letter-spacing:.14em;text-align:right}.mapbar-val{font-size:10.5px;color:#d6dde0;font-variant-numeric:tabular-nums}
 .mapbar-track{position:relative;height:9px;background:#000000b0;border:1px solid #e2c07a88;overflow:hidden}.mapbar-track i{position:absolute;inset:0 auto 0 0;transition:width .2s}
 .mapbar .nep .mapbar-track i{background:linear-gradient(90deg,#b0122e,#ff4d5e 70%,#ff9aa4);box-shadow:0 0 8px #ff4d5e}.mapbar .lamp .mapbar-track i{background:linear-gradient(90deg,#c9a14e,#f6e3ae);box-shadow:0 0 8px #e8c47c88}
 .mapbar.siege .lamp .mapbar-track{border-color:var(--red);animation:pulse 1s infinite}.mapbar.siege .lamp .mapbar-name{color:#ff9aa6}
@@ -314,7 +314,7 @@ body[data-story="on"] .mapbar,body[data-story="on"] .fleet-roster,body[data-stor
 @keyframes contactIn{from{opacity:0;transform:scaleY(.2)}to{opacity:1;transform:none}}
 .odds-tag.even{border-color:var(--gold);background:#5a4a1a66;color:var(--gold2);box-shadow:0 0 14px #e8c47c55}
 @media (max-height:500px) and (orientation:landscape){
- .mapbar{width:min(400px,46vw);padding:4px 12px 4px;gap:3px}.mapbar-row{font-size:10px;grid-template-columns:5.8em 1fr 5.6em;gap:6px}.mapbar-track{height:7px}.mapbar-time b{font-size:12px}.tac-pause{top:calc(var(--pad) + 74px);font-size:15px}.tac-pause small{display:none}
+ .mapbar{width:min(400px,46vw);padding:4px 12px 4px;gap:3px}.mapbar-row{font-size:10px;grid-template-columns:7em 1fr 5.6em;gap:6px}.mapbar-track{height:7px}.mapbar-time b{font-size:12px}.tac-pause{top:calc(var(--pad) + 74px);font-size:15px}.tac-pause small{display:none}
  body[data-view="map"]{--chart-w:min(150px,19vw)}body[data-view="map"] #chartTip{display:none}
  .fleet-roster{width:min(200px,26vw)}.fleet-card{padding:3px 6px;gap:2px}.fleet-head strong{font-size:10.5px}.fleet-head small{font-size:8.5px}.mini-ship .member-crest{width:20px;height:20px;font-size:10px}.mini-ship small{display:none}.mini-ship .bar{height:3px}.fleet-card.selected::after{display:none}
  .map-ctl .secondary{padding:8px 12px;font-size:11px}.map-ctl .primary{padding:8px 14px;font-size:11px;min-width:8em}.contact{top:30%;padding:8px 14px}

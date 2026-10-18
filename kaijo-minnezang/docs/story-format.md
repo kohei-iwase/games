@@ -80,4 +80,4 @@
 | `prologue.txt` | ゲームの開始時（プロローグ。`docs/scenario/opening.md` のプロットに合わせたもの。旧版は `docs/scenario/old-2026-10-12/`） |
 | `join-kanaan.txt` | プロローグの直後（老騎士カナンの合流と、戦略マップの手ほどき） |
 | `contact-nephilim.txt` | ネフェリムと初めて接触したとき（準備画面の前） |
-| `interlude-lamp.txt` | 主力艦隊が初めて峰の灯で補給したとき（幕間） |
+| `interlude-lamp.txt` | 主力艦隊が初めてヨスガの灯台で補給したとき（幕間） |

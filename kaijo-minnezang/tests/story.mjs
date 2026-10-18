@@ -92,8 +92,8 @@ test('書式の誤りは例外にせず warn として残す',()=>{
  assert.equal(c[0].type,'warn');assert.ok(c[0].text.includes('@未知'));assert.equal(c[1].type,'say');
  assert.equal(c.find(x=>x.type==='say'&&x.line===9).emotion,null)});
 test('@見出し：見出しと副題（全角｜・半角|・副題なし）、見出しなしは警告',()=>{
- const c=parseScript('@見出し 霧月 18日｜峰の灯の島\n@見出し 沖|ネフェリム、浮上\n@見出し 夜\n@見出し ｜副題だけ');
- assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.title,x.sub]),[['heading','霧月 18日','峰の灯の島'],['heading','沖','ネフェリム、浮上'],['heading','夜','']]);
+ const c=parseScript('@見出し 霧月 18日｜ミオツク島\n@見出し 沖|ネフェリム、浮上\n@見出し 夜\n@見出し ｜副題だけ');
+ assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.title,x.sub]),[['heading','霧月 18日','ミオツク島'],['heading','沖','ネフェリム、浮上'],['heading','夜','']]);
  assert.equal(c[3].type,'warn');assert.equal(c[0].line,1)});
 test('4つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
  for(const n of ['prologue','join-kanaan','contact-nephilim','interlude-lamp']){
@@ -106,7 +106,7 @@ test('@転換：背景・見出し・副題・札（省略可）、背景が読�
  assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.bg,x.title,x.sub,x.tag]),[['trans','valley','沈みし峰々の沖','ネフェリム、浮上','接敵'],['trans','inlet','修繕の夜','',''],['trans','sea','','','']]);
  assert.deepEqual(c.slice(3).map(x=>x.type),['warn','warn']);
  assert.deepEqual(parseScript('@背景 入り江\n@背景 谷\n@背景 空').map(x=>x.value||x.type),['inlet','valley','warn'])});
-test('@見出しの札（3つ目）',()=>{const [h]=parseScript('@見出し 霧月 18日｜峰の灯の島｜夜');assert.deepEqual([h.title,h.sub,h.tag],['霧月 18日','峰の灯の島','夜'])});
+test('@見出しの札（3つ目）',()=>{const [h]=parseScript('@見出し 霧月 18日｜ミオツク島｜夜');assert.deepEqual([h.title,h.sub,h.tag],['霧月 18日','ミオツク島','夜'])});
 test('@説明 開始／終了、それ以外は警告',()=>{
  const c=parseScript('@説明 開始\n＊地の文\n@説明 終了\n@説明 途中\n@説明');
  assert.deepEqual(c.map(x=>x.type),['brief','narr','brief','warn','warn']);assert.deepEqual([c[0].on,c[2].on],[true,false])});

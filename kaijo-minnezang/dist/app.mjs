@@ -79,7 +79,7 @@ function storyUI(){
  $('#story').hidden=!story;const key=story+(report?report.battles+':'+report.time:'');if(!story||key===storyKey){if(!story)storyKey='';return}storyKey=key;const ep=story==='epilogue';
  $('#story').classList.toggle('lost',ep&&report.result!=='victory');
  const e=epilogue(report),r=report;$('#storyPlace').textContent=`戦果報告 · ${difficultyName(r.difficulty)} · 全${r.battles}戦`;$('#storyTitle').textContent=e.title;$('#storyRank').hidden=false;$('#storyRank').textContent=r.rank;$('#storyRank').dataset.rank=r.rank;$('#storyNote').textContent=e.note+(newBest&&r.result==='victory'?'　·　自己ベスト更新':'');$('#storyLines').innerHTML=speech(e.lines);
- $('#storyStats').hidden=false;$('#storyStats').innerHTML=[['所要時間',clock(r.time)],['戦闘回数',`${r.battles}戦`],['峰の灯',`${r.island} / 100`],['総与ダメージ',r.dealtTotal],['総被害',r.taken],['生還',`${r.ships.filter(s=>!s.sunk).length} / ${r.ships.length}`]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+ $('#storyStats').hidden=false;$('#storyStats').innerHTML=[['所要時間',clock(r.time)],['戦闘回数',`${r.battles}戦`],['ヨスガの灯台',`${r.island} / 100`],['総与ダメージ',r.dealtTotal],['総被害',r.taken],['生還',`${r.ships.filter(s=>!s.sunk).length} / ${r.ships.length}`]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
  $('#storyHints').innerHTML=strategyHints(r).map(h=>`<li>${esc(h)}</li>`).join('');$('#storyGo').textContent='最初から ［Space］';$('#storyClose').hidden=true;
 }
 function recordUI(){const rec=loadRecords()[b.difficulty];$('#bestRecord').textContent=rec?`最高評価 ${rec.rank}${rec.rank!=='—'?` · ${clock(rec.time)}${rec.battles?` · ${rec.battles}戦`:''}`:''}`:'記録なし'}
@@ -101,7 +101,7 @@ function ui(){storyUI();flowUI();sound();const map=inMap(),body=document.body;
  if(body){body.dataset.view=map?'map':'battle';body.dataset.mode=map?(st.paused?'paused':'running'):b.mode;body.dataset.phase=phase||'';body.dataset.threat=!map&&b.enemy.attack&&b.mode!=='ended'?'on':'';body.dataset.story=story||phase==='prep'||phase==='result'?'on':'';body.dataset.talk=talk.active?'on':''}
  const hint=map?'ドラッグ：視点移動 ／ ホイール：ズーム ／ 艦隊をクリックで選択、海面で移動・敵で追跡 ／ Space：進行・戦術ポーズ':'ドラッグ：旋回 ／ ホイール：ズーム ／ Space：一時停止・再開 ／ F：ジョスト射出';if(hint!==hintKey){hintKey=hint;$('#cameraHint').textContent=hint}
  if(map)mapUI();else battleUI()}
-// 戦略マップのHUD：ネフェリムと峰の灯の耐久、経過時間、艦隊一覧、ログ、操作ボタン。
+// 戦略マップのHUD：ネフェリムとヨスガの灯台の耐久、経過時間、艦隊一覧、ログ、操作ボタン。
 function mapUI(){
  if(!st.fleet(fleetSel))fleetSel=st.fleets[0]?.id||null;
  const nep=st.enemy('nephilim'),sel=st.fleet(fleetSel),live=phase==='map'&&!st.encounter&&!st.result&&!contactAt&&!finishAt,lamp=st.lamp.hp;
@@ -171,7 +171,7 @@ function mapFrame(now,dt){
  if(st.result){if(!finishAt){finishAt=now+1800;banner(st.reason)}else if(now>=finishAt)finish();return}
  if(talk.active||st.paused||document.hidden||$('#help').open)return;
  for(let left=dt*mapSpeed;left>1e-9&&!st.paused&&!st.encounter&&!st.result;left-=.1)st.step(Math.min(.1,left));
- // 幕間：戦闘を経験した主力艦隊が初めて峰の灯の補給圏に入ったら、進行を止めて会話を流す。
+ // 幕間：戦闘を経験した主力艦隊が初めてヨスガの灯台の補給圏に入ったら、進行を止めて会話を流す。
  if(!st.seen.interlude&&st.battles>0&&!st.encounter&&!st.result){const m=st.fleet('main');if(m&&fleetState(m)==='補給圏'){st.seen.interlude=true;st.paused=true;scene('interlude-lamp',toMap)}}}
 function frame(now){const raw=Math.max(0,(now-last)/1000),dt=Math.min(.08,raw);last=now;const watch=phase==='watch';
  if(phase==='map')mapFrame(now,Math.min(.25,raw));

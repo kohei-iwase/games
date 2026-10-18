@@ -39,7 +39,7 @@ export function buildScene(b,selected='lance',showRange=false){
  for(const [x,y] of [[45,45],[955,45],[955,605],[45,605]]){item('cylinder',world(x,y,6),[4,10,4],C.dark);item('sphere',world(x,y,14),[2,2,2],[.67,.75,.56,1],0,.8);}
  // Offshore rocks frame, but never obstruct, the navigable chart.
  for(const [x,y,s] of [[-30,80,70],[1015,555,75],[-80,590,56],[1070,10,42],[220,-105,35]]){item('sphere',world(x,y,-8),[s,s*.75,s*.8],[.12,.19,.22,1]);item('cone',world(x+5,y,24),[s*.4,s*.6,s*.4],[.22,.29,.29,1]);}
- // 浅瀬：海面すれすれの半透明の円盤と点在する岩。島「峰の灯」：岩の山頂に灯台と灯（島の耐久で弱まる）。
+ // 浅瀬：海面すれすれの半透明の円盤と点在する岩。島「ヨスガの灯台」：岩の山頂に灯台と灯（島の耐久で弱まる）。
  SHOALS.forEach((o,k)=>{item('sphere',world(o.x,o.y,-.6),[o.r,2,o.r],[.52,.82,.70,.2],0,.15);item('sphere',world(o.x,o.y,-.3),[o.r*.62,1.5,o.r*.62],[.84,.86,.70,.18],0,.15);for(let i=0;i<4;i++){const a=k*1.7+i*1.9,d=o.r*(.35+.18*((i*5+k)%4)),q=5+(i+k)%3*2;item('sphere',world(o.x+Math.cos(a)*d,o.y+Math.sin(a)*d,-1),[q,q*.7,q*.85],[.17,.24,.25,1]);}});
  {const lit=.3+.7*clamp(b.island.hp/100,0,1),ix=ISLAND.x,iy=ISLAND.y,s=ISLAND.r*1.3,siege=b.enemy.siege&&Math.sin(b.time*9)>0;item('sphere',world(ix,iy,-8),[s,s*.75,s*.8],[.17,.24,.26,1]);item('cone',world(ix+3,iy,24),[s*.4,s*.6,s*.4],[.27,.34,.33,1]);item('cylinder',world(ix+3,iy,48),[7,26,7],[.78,.76,.66,1]);item('cylinder',world(ix+3,iy,62),[9,3,9],C.gold);item('sphere',world(ix+3,iy,67),[6,6,6],siege?[1,.45,.3,1]:[1*lit,.78*lit,.4*lit,1],0,.4+1.4*lit);ring(ix,iy,ISLAND.r+8,siege?[.95,.2,.25,.9]:[.91,.77,.40,.45*lit+.15],5);}
  const rally=b.pending==='rally'?(b.pendingRally||b.rally):b.order==='rally'?b.rally:null;

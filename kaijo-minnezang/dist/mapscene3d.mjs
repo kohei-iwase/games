@@ -29,7 +29,7 @@ export function buildMapScene(st,{selected=null,now=0}={}){
  SHOALS.forEach((o,k)=>{const r=o.r*S;item('sphere',mapWorld(o.x,o.y,-.6),[r,1.6,r],[.52,.82,.70,.2],0,.15);item('sphere',mapWorld(o.x,o.y,-.3),[r*.62,1.2,r*.62],[.84,.86,.70,.18],0,.15);for(let i=0;i<4;i++){const a=k*1.7+i*1.9,d=r*(.35+.18*((i*5+k)%4)),q=2.5+(i+k)%3;item('sphere',mapWorld(o.x,o.y,-1).map((v,j)=>v+(j===0?Math.cos(a)*d:j===2?Math.sin(a)*d:0)),[q,q*.7,q*.85],[.17,.24,.25,1])}});
  // 小島：通れない岩。
  ISLETS.forEach((o,k)=>{const r=o.r*S;item('sphere',mapWorld(o.x,o.y,-r*.2),[r*1.1,r*.8,r*.95],[.26,.33,.34,1],k);item('cone',mapWorld(o.x+8,o.y,r*.35),[r*.6,r*.95,r*.55],[.36,.43,.42,1],k);item('cone',mapWorld(o.x-r*.9,o.y+r*.5,0),[r*.3,r*.5,r*.3],[.22,.29,.29,1])});
- // 峰の灯：岩の山頂に灯台と灯（島の耐久で弱まる）。包囲されている間は灯が赤く瞬く。補給の範囲を淡い輪で示す。
+ // ヨスガの灯台：岩の山頂に灯台と灯（島の耐久で弱まる）。包囲されている間は灯が赤く瞬く。補給の範囲を淡い輪で示す。
  {const lit=.3+.7*clamp(st.lamp.hp/100,0,1),f=LAMP.r*S*1.3/54.6,siege=st.enemies.some(e=>e.active&&e.siege)&&Math.sin(now*9)>0,[x,,z]=mapWorld(LAMP.x,LAMP.y),at=(h,dx=0)=>[x+dx*f,h*f,z];
   item('sphere',at(-8),[54.6*f,41*f,43.7*f],[.17,.24,.26,1]);item('cone',at(24,3),[22*f,33*f,22*f],[.27,.34,.33,1]);item('cylinder',at(52,3),[8*f,30*f,8*f],[.78,.76,.66,1]);item('cylinder',at(68,3),[10*f,3.5*f,10*f],C.gold);
   item('sphere',at(74,3),[7*f,7*f,7*f],siege?[1,.45,.3,1]:[lit,.78*lit,.4*lit,1],0,.4+1.4*lit);
