@@ -4,8 +4,8 @@ import {buildScene,bloodTexture,shipPose} from './scene3d.mjs';
 import {FLAGSHIP,swarmAlive,SWARM,fullName} from './battle.mjs';
 import {buildMapScene,mapWorld,mapFromGround,shipMaxHp,FLEET_COLOR} from './mapscene3d.mjs';
 import {MAP,LAMP} from './strategy.mjs';
-// 戦略マップで、ミラルカのいる艦隊の目印に出す二頭身の立ち絵。
-const CHIBI=typeof Image!=='undefined'?Object.assign(new Image(),{src:'./art/chibi-miralka.png'}):null;
+// 戦略マップで、艦隊の目印に出す二頭身の立ち絵（騎士ごと。艦隊にいる騎士のうち、この並びで先の者を出す）。
+const CHIBIS=typeof Image==='undefined'?[]:[['lance','./art/chibi-miralka.png'],['stake','./art/chibi-kanaan.png']].map(([type,src])=>({type,img:Object.assign(new Image(),{src})}));
 const VIEW_PITCH={rear:.32,first:-.08,overview:0};
 export class SeaRenderer {
  constructor(canvas,{reducedMotion=false}={}){
@@ -79,7 +79,7 @@ export class SeaRenderer {
   // 当たり判定：モデルの海面・中ほど・上端の3点を投影して近い方を取り、半径は海面での半径（艦隊72・ネフェリム60・眷属40）を画面に映した大きさ（下限つき）。艦隊 > 敵 > 海面の順に優先。
   const px=(o,len)=>{const a=project(this.camera.vp,mapWorld(o.x,o.y,0),r.width,r.height),b=project(this.camera.vp,mapWorld(o.x+len,o.y,0),r.width,r.height);return a&&b?Math.hypot(a.x-b.x,a.y-b.y):0};
   const hit=(list,top,len,min,key)=>{let best=null,bd=1e9;for(const o of list){const rad=Math.max(min,px(o,len(o))),hh=top(o);let d=1e9;for(const h of [0,hh/2,hh]){const p=project(this.camera.vp,mapWorld(o.x,o.y,h),r.width,r.height);if(p)d=Math.min(d,Math.hypot(p.x-x,p.y-y)/rad)}if(d<=1&&d<bd){bd=d;best=o}}if(best)out[key]=best;return best};
-  const ch=this.chibiHit;if(ch&&x>=ch.x&&x<=ch.x+ch.w&&y>=ch.y&&y<=ch.y+ch.h){out.fleet=st.fleets.find(f=>f.id===ch.id)||null;if(out.fleet)return out}
+  const ch=(this.chibiHit||[]).find(c=>x>=c.x&&x<=c.x+c.w&&y>=c.y&&y<=c.y+c.h);if(ch){out.fleet=st.fleets.find(f=>f.id===ch.id)||null;if(out.fleet)return out}
   if(!hit(st.fleets,()=>45,()=>72,26,'fleet'))hit(st.enemies.filter(e=>e.active),e=>e.kind==='nephilim'?90:25,e=>e.kind==='nephilim'?60:40,24,'enemy');
   if(!out.fleet&&!out.enemy){const g=groundPoint(this.camera.inv,x,y,r.width,r.height);if(g){const p=mapFromGround(g);if(p.x>=0&&p.x<=MAP.w&&p.y>=0&&p.y<=MAP.h)out.point=p}}return out}
  renderMap(st,{selected=null}={}){
@@ -96,8 +96,8 @@ export class SeaRenderer {
   const at=(o,z)=>project(this.camera.vp,mapWorld(o.x,o.y,z),w,h);
   const tag=(text,p,color,hp,size=12)=>{if(!p||p.x<-100||p.x>w+100||p.y<0||p.y>h)return;c.font=`500 ${size}px system-ui,sans-serif`;const bw=Math.max(c.measureText(text).width+16,70);c.fillStyle='#0c0814e8';c.fillRect(p.x-bw/2,p.y-11,bw,22+(hp===null?0:6));c.strokeStyle=color+'66';c.lineWidth=1;c.strokeRect(p.x-bw/2+.5,p.y-11+.5,bw-1,21+(hp===null?0:6));c.fillStyle=color;c.fillText(text,p.x,p.y);if(hp!==null){c.fillStyle='#000a';c.fillRect(p.x-bw/2+4,p.y+9,bw-8,3);c.fillStyle=hp<.3?'#f77d99':color;c.fillRect(p.x-bw/2+4,p.y+9,(bw-8)*hp,3)}};
   tag(LAMP.name,at(LAMP,95),'#f2d58f',null,12);
-  // ミラルカ（lance）のいる艦隊の上に二頭身の立ち絵を出す（選択中は少し大きく、ゆっくり上下に揺れる）。クリック判定用に位置を覚えておく。
-  this.chibiHit=null;if(CHIBI?.complete&&CHIBI.naturalWidth){const f=st.fleets.find(f=>f.ships.some(s=>s.type==='lance')),p=f&&at(f,70);if(p&&p.x>-100&&p.x<w+100&&p.y>0&&p.y<h){const ch=f.id===selected?96:84,cw=ch*CHIBI.naturalWidth/CHIBI.naturalHeight,y=p.y-14-ch+Math.sin(performance.now()/420)*2.5;c.drawImage(CHIBI,p.x-cw/2,y,cw,ch);this.chibiHit={x:p.x-cw/2,y,w:cw,h:ch,id:f.id}}}
+  // 騎士のいる艦隊の上に二頭身の立ち絵を出す（選択中は少し大きく、ゆっくり上下に揺れる。艦隊ごとに揺れをずらす）。クリック判定用に位置を覚えておく。
+  this.chibiHit=[];st.fleets.forEach((f,i)=>{const ch0=CHIBIS.find(k=>f.ships.some(s=>s.type===k.type)),img=ch0?.img,p=at(f,70);if(!img?.complete||!img.naturalWidth||!p||p.x<-100||p.x>w+100||p.y<0||p.y>h)return;const ch=f.id===selected?76:64,cw=ch*img.naturalWidth/img.naturalHeight,y=p.y-14-ch+Math.sin(performance.now()/420+i*1.7)*2.5;c.drawImage(img,p.x-cw/2,y,cw,ch);this.chibiHit.push({x:p.x-cw/2,y,w:cw,h:ch,id:f.id})});
   for(const f of st.fleets){const hp=f.ships.reduce((n,s)=>n+Math.max(0,s.hp),0)/f.ships.reduce((n,s)=>n+shipMaxHp(s.type),0);tag(f.name,at(f,70),FLEET_COLOR[f.id]||'#d23a54',hp,f.id===selected?13:11)}
   for(const e of st.enemies){if(!e.active)continue;tag(`${e.name} ${Math.ceil(e.hp)}`,at(e,e.kind==='nephilim'?100:50),e.kind==='nephilim'?'#f2b0bf':'#c8a9b4',e.hp/e.maxHp,11)}
  }
