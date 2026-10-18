@@ -6,11 +6,13 @@ const count=c=>c.reduce((m,x)=>(m[x.type]=(m[x.type]||0)+1,m),{});
 const tests=[];function test(n,f){f();tests.push(n)}
 
 const flat=c=>c.flatMap(x=>x.type==='choice'?[x,...x.branches.flatMap(flat)]:[x]);
-test('4つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
- const p=load('prologue'),k=load('join-kanaan'),c=load('contact-nephilim'),i=load('interlude-lamp');
- for(const s of [p,k,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{bg:4,brief:4,narr:15,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:27,choice:1,exit:2,nameinput:1});
- assert.deepEqual(count(flat(p)),{bg:4,brief:4,narr:15,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:31,choice:1,exit:2,nameinput:1});
+test('5つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
+ const p=load('prologue'),h=load('church'),k=load('join-kanaan'),c=load('contact-nephilim'),i=load('interlude-lamp');
+ for(const s of [p,h,k,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
+ assert.deepEqual(count(p),{bg:3,brief:2,narr:13,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:27,choice:1,exit:2});
+ assert.deepEqual(count(flat(p)),{bg:3,brief:2,narr:13,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:31,choice:1,exit:2});
+ assert.deepEqual(count(h),{trans:1,air:3,form:2,narr:4,enter:5,say:36,choice:2,sfx:2,fx:3,brief:2,bg:4,nameinput:1,exit:1});
+ assert.deepEqual(count(flat(h)),{trans:1,air:3,form:2,narr:4,enter:5,say:46,choice:2,sfx:2,fx:3,brief:2,bg:4,nameinput:1,exit:1});
  assert.deepEqual(count(k),{trans:1,air:1,form:1,enter:3,say:24,brief:2});
  assert.deepEqual(count(c),{trans:1,brief:2,bg:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:10,choice:1});
  assert.deepEqual(count(i),{trans:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
@@ -27,7 +29,7 @@ test('選択肢と分岐の構造',()=>{
  assert.deepEqual(one.options,['はい','いいえ']);assert.deepEqual(one.branches.map(b=>b.length),[1,2]);
  assert.equal(parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@ここまで\nオリーヴェ え').length,2)});
 test('{姫}はパーサでは置換しない',()=>{
- const t=flat(load('prologue')).filter(x=>(x.type==='say'||x.type==='narr')&&x.text.includes('{姫}'));
+ const t=flat(load('church')).filter(x=>(x.type==='say'||x.type==='narr')&&x.text.includes('{姫}'));
  assert.ok(t.length>=1);assert.ok(flat(load('interlude-lamp')).some(x=>x.type==='say'&&x.text.includes('{姫}')))});
 test('話者「姫」・@姿・@名前入力',()=>{
  const [h]=parseScript('姫［驚き］えっ');assert.equal(h.who.key,'hero');assert.equal(h.who.name,'姫');assert.equal(h.who.art,'hero');
@@ -95,8 +97,8 @@ test('@見出し：見出しと副題（全角｜・半角|・副題なし）、
  const c=parseScript('@見出し 霧月 18日｜ミオツク島\n@見出し 沖|ネフェリム、浮上\n@見出し 夜\n@見出し ｜副題だけ');
  assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.title,x.sub]),[['heading','霧月 18日','ミオツク島'],['heading','沖','ネフェリム、浮上'],['heading','夜','']]);
  assert.equal(c[3].type,'warn');assert.equal(c[0].line,1)});
-test('4つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
- for(const n of ['prologue','join-kanaan','contact-nephilim','interlude-lamp']){
+test('5つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
+ for(const n of ['prologue','church','join-kanaan','contact-nephilim','interlude-lamp']){
   const s=load(n),t0=n==='prologue'?s.find(x=>x.type==='trans'):s[0];assert.equal(t0.type,'trans',n+' の最初が @転換（プロローグは夢の後の最初の場面）');assert.ok(t0.title&&t0.sub&&t0.tag,n);
   const walk=(cmds,on)=>{let saved=null;for(const x of cmds){if(x.type==='brief'){if(x.on){saved=new Set(on);on.clear()}else{on.clear();for(const k of saved||[])on.add(k)}}
    if(x.type==='trans')on.clear();if(x.type==='enter')on.add(x.who.key);else if(x.type==='exit')on.delete(x.who.key);assert.ok(on.size<=3,`${n} ${x.line}行目で4人以上`);if(x.type==='choice')x.branches.forEach(b=>walk(b,new Set(on)))}};walk(s,new Set());
