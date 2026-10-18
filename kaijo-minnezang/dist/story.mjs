@@ -17,7 +17,7 @@ const FORMS={人:'human',幻影:'ghost'};
 export const MOTIONS={跳ねる:'hop',揺れる:'sway',身を引く:'recoil',前に出る:'lunge',震える:'tremble',頷く:'nod'};
 // 動きを書かなかったときの、感情ごとの既定の動き。
 export const DEFAULT_MOTION={喜び:'跳ねる',驚き:'身を引く',怒り:'揺れる',焦り:'震える'};
-const POSITIONS={左:'left',中:'center',右:'right'},BACKGROUNDS={海:'sea',海図:'chart',暗転:'black',入り江:'inlet',谷:'valley',墓地:'graveyard',礼拝堂:'chapel'};
+const POSITIONS={左:'left',中:'center',右:'right'},BACKGROUNDS={海:'sea',海図:'chart',暗転:'black',入り江:'inlet',谷:'valley',墓地:'graveyard',礼拝堂:'chapel',夢の海:'dreamsea',夢の城:'dreamcastle'};
 const AIRS={潮風:'sea',夜の港:'harbor',地鳴り:'rumble',嵐:'storm',なし:null},EFFECTS={閃光:'flash',暗転:'fadeout',明転:'fadein',揺れ:'shake'},SOUNDS={鐘:'bell',鼓動:'heart',杭:'stake',十字架:'cross',打撃:'hit',雷:'thunder'};
 
 const BY_ALIAS=new Map(Object.values(CHARACTERS).flatMap(c=>c.aliases.map(a=>[a,c])));
@@ -70,7 +70,7 @@ export function parseScript(text){
 
  function command(cmd,a,line,raw){
   switch(cmd){
-    case '背景':if(BACKGROUNDS[a[0]])emit({type:'bg',line,value:BACKGROUNDS[a[0]]});else warn(line,`未知の背景「${a[0]??''}」（海・海図・暗転・入り江・谷・墓地・礼拝堂）`);break;
+    case '背景':if(BACKGROUNDS[a[0]])emit({type:'bg',line,value:BACKGROUNDS[a[0]]});else warn(line,`未知の背景「${a[0]??''}」（海・海図・暗転・入り江・谷・墓地・礼拝堂・夢の海・夢の城）`);break;
     case '登場':case '退場':{const who=resolveName(a[0]??'');
      if(!a[0])warn(line,`@${cmd} に名前がありません`);
      else if(!who.art)warn(line,`「${a[0]}」には立ち絵がありません`);

@@ -9,8 +9,8 @@ const flat=c=>c.flatMap(x=>x.type==='choice'?[x,...x.branches.flatMap(flat)]:[x]
 test('5つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
  const p=load('prologue'),h=load('church'),k=load('join-kanaan'),c=load('contact-nephilim'),i=load('interlude-lamp');
  for(const s of [p,h,k,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{bg:3,brief:2,narr:13,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:27,choice:1,exit:2});
- assert.deepEqual(count(flat(p)),{bg:3,brief:2,narr:13,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:31,choice:1,exit:2});
+ assert.deepEqual(count(p),{bg:4,brief:2,narr:13,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:27,choice:1,exit:2});
+ assert.deepEqual(count(flat(p)),{bg:4,brief:2,narr:13,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:31,choice:1,exit:2});
  assert.deepEqual(count(h),{trans:1,air:3,form:2,narr:4,enter:5,say:36,choice:2,sfx:2,fx:3,brief:2,bg:4,nameinput:1,exit:1});
  assert.deepEqual(count(flat(h)),{trans:1,air:3,form:2,narr:4,enter:5,say:46,choice:2,sfx:2,fx:3,brief:2,bg:4,nameinput:1,exit:1});
  assert.deepEqual(count(k),{trans:1,air:1,form:1,enter:3,say:24,brief:2});
@@ -107,7 +107,7 @@ test('@転換：背景・見出し・副題・札（省略可）、背景が読�
  const c=parseScript('@転換 谷｜沈みし峰々の沖｜ネフェリム、浮上｜接敵\n@転換 入り江|修繕の夜\n@転換 海\n@転換 空｜見出し\n@転換');
  assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.bg,x.title,x.sub,x.tag]),[['trans','valley','沈みし峰々の沖','ネフェリム、浮上','接敵'],['trans','inlet','修繕の夜','',''],['trans','sea','','','']]);
  assert.deepEqual(c.slice(3).map(x=>x.type),['warn','warn']);
- assert.deepEqual(parseScript('@背景 入り江\n@背景 谷\n@背景 墓地\n@背景 礼拝堂\n@背景 空').map(x=>x.value||x.type),['inlet','valley','graveyard','chapel','warn'])});
+ assert.deepEqual(parseScript('@背景 入り江\n@背景 谷\n@背景 墓地\n@背景 礼拝堂\n@背景 夢の海\n@背景 夢の城\n@背景 空').map(x=>x.value||x.type),['inlet','valley','graveyard','chapel','dreamsea','dreamcastle','warn'])});
 test('@見出しの札（3つ目）',()=>{const [h]=parseScript('@見出し 霧月 18日｜ミオツク島｜夜');assert.deepEqual([h.title,h.sub,h.tag],['霧月 18日','ミオツク島','夜'])});
 test('@説明 開始／終了、それ以外は警告',()=>{
  const c=parseScript('@説明 開始\n＊地の文\n@説明 終了\n@説明 途中\n@説明');

@@ -414,6 +414,8 @@ body[data-talk="on"] .stage>:not(canvas):not(#talk):not(.rotate-hint):not(#rende
 .stage.talk-graveyard .talk{background:linear-gradient(180deg,transparent 50%,#02030a99),url(./art/bg-graveyard.jpg) center/cover no-repeat,linear-gradient(#02030acc,#02030acc),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
 .stage.talk-chapel .talk{background:linear-gradient(180deg,transparent 50%,#02030a99),url(./art/bg-chapel.jpg) center/cover no-repeat,linear-gradient(#02030acc,#02030acc),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
 .stage.talk-valley .talk{background:linear-gradient(180deg,transparent 62%,#02030a80),url(./art/bg-valley.jpg) center/cover no-repeat,linear-gradient(#02030ad0,#02030ad0),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
+.stage.talk-dreamsea .talk{background:linear-gradient(180deg,transparent 62%,#02030a80),url(./art/bg-dream-sea.jpg) center/cover no-repeat,linear-gradient(#02030ad0,#02030ad0),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
+.stage.talk-dreamcastle .talk{background:linear-gradient(180deg,transparent 62%,#02030a80),url(./art/bg-dream-castle.jpg) center/cover no-repeat,linear-gradient(#02030ad0,#02030ad0),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
 /* 3人目は中央の奥：少し小さく暗く、前の2人より下の層。奥の人が話すと、前の人と溶けて入れ替わる（.melt で透明にし、.jump のあいだに動かす）。 */
 .talk-slot[data-row=back]{z-index:0}.talk-slot[data-row=back].shown .talk-fig{transform:scale(.92);filter:brightness(.55)}
 .talk-slot.melt .talk-fig{transition:opacity .22s,transform .5s,filter .35s}.talk-slot.shown.melt .talk-fig{opacity:0}.talk-slot.jump,.talk-slot.jump .talk-fig{transition:none}
