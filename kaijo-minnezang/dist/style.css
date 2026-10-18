@@ -427,6 +427,12 @@ body[data-talk="on"] .stage>:not(canvas):not(#talk):not(.rotate-hint):not(#rende
 .air-sea i{left:0;background:#fff;box-shadow:0 0 6px #cfe8ffcc;animation:aSpray var(--d) linear var(--dl) infinite}
 .air-harbor i{background:radial-gradient(circle,#fff6d0,#ffc060 55%,#ff9a3a00);box-shadow:0 0 10px 3px #ffb347aa;animation:aRise var(--d) ease-in-out var(--dl) infinite}
 .air-rumble i{border-radius:2px 2px 50% 50%;background:linear-gradient(#dcefff00,#dcefffd8);animation:aDrop var(--d) linear var(--dl) infinite}.air-rumble i.blood{background:linear-gradient(#b3122e00,#c4152f)}
+/* 嵐：斜めの雨の線（左下へ落ちる）と、雷の閃光（弱めの2回点滅。減らす動きの設定では弱く1回）。 */
+.air-storm i{border-radius:0;rotate:14deg;background:linear-gradient(#cfe4ff00,#e4f0ffe0);animation:aStorm var(--d) linear var(--dl) infinite}
+.air-storm b{position:absolute;inset:0;background:#fff;opacity:0}.air-storm b.on{animation:aThunder .9s ease-out}
+@keyframes aStorm{0%{transform:translate(0,-14vh);opacity:var(--o)}100%{transform:translate(-30vh,118vh);opacity:var(--o)}}
+@keyframes aThunder{0%{opacity:0}5%{opacity:.7}14%{opacity:.08}24%{opacity:.55}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.air-storm b.on{animation:aThunderCalm .9s ease-out}@keyframes aThunderCalm{0%{opacity:0}8%{opacity:.25}100%{opacity:0}}}
 @keyframes aSpray{0%{transform:translate(-4vw,0);opacity:0}10%,90%{opacity:var(--o)}100%{transform:translate(106vw,var(--dy));opacity:0}}
 @keyframes aRise{0%{transform:translate(0,0);opacity:0}20%{opacity:var(--o)}40%{opacity:.25}60%{opacity:var(--o)}100%{transform:translate(var(--dx),-34vh);opacity:0}}
 @keyframes aDrop{0%{transform:translateY(-6vh);opacity:0}8%{opacity:var(--o)}100%{transform:translateY(108vh);opacity:var(--o)}}

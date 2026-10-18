@@ -5,7 +5,7 @@ import {DEFAULT_HERO_NAME} from './config.mjs';
 const TYPE_MS=34,FX_MS={flash:620,fadeout:1400,fadein:1200,shake:560};
 const SYMBOL_MS=1800,HEADING_MS=2400,WIPE_MS=450,BGS=['sea','chart','black','inlet','valley'],TAG_COLORS={夜:'#3b4aa0',翌朝:'#d08a2c',接敵:'#b01a38',幕間:'#2f7d6e'},FORM_NAMES=['乙女','若人（わこうど）'],FORMS=['female','male'];
 // 立ち絵の中心（画面幅の%）。1人のときは中央やや右寄り、2人のときは左右（前列）、3人目は中央の奥（後列）。説明モードの集合絵は最大4人を横に並べて少し重ねる。
-const X_ONE=58,X_LEFT=30,X_RIGHT=72,X_BACK=51,X_GAP=22,AIR_N={sea:30,harbor:26,rumble:34},SYM_SFX={sad:'dots',weary:'dots'};
+const X_ONE=58,X_LEFT=30,X_RIGHT=72,X_BACK=51,X_GAP=22,AIR_N={sea:30,harbor:26,rumble:34,storm:70},SYM_SFX={sad:'dots',weary:'dots'};
 
 // opts: {root:#talk, stage:.stage, audio, shake(), onTap(), hero:{name(), form(), setName(v), setForm(v)}}（姫の名前・姿は config.mjs に保存される）
 export function createTalk(opts){
@@ -19,7 +19,7 @@ export function createTalk(opts){
  const setBg=v=>{s.bg=v;for(const k of BGS)stage.classList.toggle('talk-'+k,v===k)};
  const restart=(node,cls)=>{node.classList.remove(cls);void node.offsetWidth;node.classList.add(cls)};
  // 姫の名前・立ち絵。{姫} は再生時にここで置き換える。
- const heroName=()=>hero.name()||'姫',heroArt=()=>`./art/talk-hero-${hero.form()==='male'?'male':'female'}.png`,sub=t=>String(t).replaceAll('{姫}',heroName());
+ const heroName=()=>hero.name()||'灯台守',heroArt=()=>`./art/talk-hero-${hero.form()==='male'?'male':'female'}.png`,sub=t=>String(t).replaceAll('{姫}',heroName());
  const artOf=who=>who.key==='hero'?heroArt():who.art;
  // 幻影の姿のあいだ、姫の立ち絵に .ghost を付ける（半透明・淡い青白・ゆっくり上下に揺れる）。
  const applyGhost=()=>{for(const sl of slots)sl.classList.toggle('ghost',sl.dataset.who==='hero'&&s.ghost)};
@@ -88,13 +88,14 @@ export function createTalk(opts){
   const isHero=who.key==='hero';el.face.style.setProperty('--c',who.color||'#6d6a78');el.face.classList.toggle('ghost',isHero&&s.ghost);
   el.faceImg._f=isHero?HERO_FACES[hero.form()==='male'?'male':'female']:who.face||DEFAULT_FACE;const src=artOf(who);
   if(!el.faceImg.src.endsWith(src.slice(1)))el.faceImg.src=src;faceFit()}
- // 場面の空気：@空気 で、会話中ずっと続く粒子と環境音（音は audio.air）。sea=飛沫が横切る、harbor=灯の粒が昇る、rumble=滴が落ちて時々揺れる。減らす動きの設定では粒を少なく、揺れなし。
+ // 場面の空気：@空気 で、会話中ずっと続く粒子と環境音（音は audio.air）。sea=飛沫が横切る、harbor=灯の粒が昇る、rumble=滴が落ちて時々揺れる、storm=斜めの雨の線と、一定の間隔の雷（閃光と雷鳴）。減らす動きの設定では粒を少なく、揺れなし。
  function air(name){
-  clearTimeout(s.quake);airLayer.textContent='';airLayer.className='talk-air';audio.air?.(name);if(!name)return;
+  clearTimeout(s.quake);clearTimeout(s.storm);airLayer.textContent='';airLayer.className='talk-air';audio.air?.(name);if(!name)return;
   const calm=matchMedia('(prefers-reduced-motion:reduce)').matches,n=Math.ceil(AIR_N[name]/(calm?3:1)),R=(a,b)=>a+Math.random()*(b-a);airLayer.classList.add('air-'+name);
-  for(let i=0;i<n;i++){const e=document.createElement('i'),d=name==='rumble'?R(1.3,2.8):name==='harbor'?R(5,9):R(8,16),big=name==='sea'?R(2,5):name==='harbor'?R(3,7):R(1.5,2.6);
-   e.style.cssText=`--x:${R(0,100)}%;--y:${name==='sea'?R(8,90):name==='harbor'?R(55,100):0}%;--s:${big}px;--w:${name==='sea'?big*R(1,4):name==='rumble'?big:big}px;--h:${name==='rumble'?R(10,24):big}px;--d:${d}s;--dl:-${R(0,d)}s;--o:${R(.4,.9)};--dx:${R(-4,4)}vw;--dy:${R(-4,4)}vh`;
+  for(let i=0;i<n;i++){const e=document.createElement('i'),d=name==='storm'?R(.45,.8):name==='rumble'?R(1.3,2.8):name==='harbor'?R(5,9):R(8,16),big=name==='sea'?R(2,5):name==='harbor'?R(3,7):R(1.5,2.6);
+   e.style.cssText=`--x:${name==='storm'?R(0,125):R(0,100)}%;--y:${name==='storm'?R(-20,100):name==='sea'?R(8,90):name==='harbor'?R(55,100):0}%;--s:${big}px;--w:${name==='storm'?R(1,2):name==='sea'?big*R(1,4):name==='rumble'?big:big}px;--h:${name==='storm'?R(50,110):name==='rumble'?R(10,24):big}px;--d:${d}s;--dl:-${R(0,d)}s;--o:${R(.4,.9)};--dx:${R(-4,4)}vw;--dy:${R(-4,4)}vh`;
    if(name==='rumble'&&Math.random()<.22)e.className='blood';airLayer.appendChild(e)}
+  if(name==='storm'){const f=document.createElement('b');airLayer.appendChild(f);let k=0;const GAP=[7000,12000,5500,15000],z=()=>{restart(f,'on');audio.sfx('storm');s.storm=setTimeout(z,GAP[k++%GAP.length])};s.storm=setTimeout(z,3500)} // 嵐：雷の閃光と雷鳴を、決まった間隔の繰り返し（ランダムでない）で出す
   if(name==='rumble'&&!calm){const q=()=>{restart(el.stageBox,'quake');audio.sfx('rumble');s.quake=setTimeout(q,R(5000,9000))};s.quake=setTimeout(q,R(2500,5000))}}
  // 場面の見出しカード：背景の上に、左から斜めに切った暗いパネル（金の縁）が滑り込み、札・見出し・副題を出して、約2.4秒で引っ込む。
  function heading(c){

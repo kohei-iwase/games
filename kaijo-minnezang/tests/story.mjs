@@ -9,26 +9,25 @@ const flat=c=>c.flatMap(x=>x.type==='choice'?[x,...x.branches.flatMap(flat)]:[x]
 test('4つの台本に警告がなく、命令の種類と件数が決まっている',()=>{
  const p=load('prologue'),k=load('join-kanaan'),c=load('contact-nephilim'),i=load('interlude-lamp');
  for(const s of [p,k,c,i])assert.equal(s.filter(x=>x.type==='warn').length,0,JSON.stringify(s.filter(x=>x.type==='warn')));
- assert.deepEqual(count(p),{trans:1,air:3,brief:4,narr:7,bg:7,form:2,enter:7,say:38,sfx:3,fx:5,exit:4,choice:2,nameinput:1});
- assert.deepEqual(count(flat(p)),{trans:1,air:3,brief:4,narr:9,bg:7,form:2,enter:7,say:45,sfx:3,fx:5,exit:4,choice:2,nameinput:1});
+ assert.deepEqual(count(p),{bg:4,brief:4,narr:15,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:27,choice:1,exit:2,nameinput:1});
+ assert.deepEqual(count(flat(p)),{bg:4,brief:4,narr:15,wait:2,air:3,sfx:5,fx:3,trans:1,form:1,enter:2,say:31,choice:1,exit:2,nameinput:1});
  assert.deepEqual(count(k),{trans:1,air:1,form:1,enter:3,say:24,brief:2});
  assert.deepEqual(count(c),{trans:1,brief:2,bg:1,air:1,sfx:2,fx:2,narr:1,form:1,enter:4,exit:2,say:10,choice:1});
  assert.deepEqual(count(i),{trans:1,air:1,narr:1,form:1,enter:6,exit:4,say:18,choice:1});
- assert.equal(p[0].type,'trans');assert.equal(p[0].bg,'sea');assert.equal(c[0].bg,'valley');assert.equal(i[0].bg,'inlet')});
+ assert.equal(p[0].type,'bg');assert.equal(p[0].value,'black');assert.equal(p.find(x=>x.type==='trans').bg,'inlet');assert.equal(c[0].bg,'valley');assert.equal(i[0].bg,'inlet')});
 test('選択肢と分岐の構造',()=>{
  const ch=load('prologue').filter(x=>x.type==='choice');
- assert.equal(ch.length,2);
- assert.deepEqual(ch[0].options,['迷わず飛び込む','ランタンの鎖を投げる']);
+ assert.equal(ch.length,1);
+ assert.deepEqual(ch[0].options,['ありがとう、いただきます','オリーヴェこそ、ずぶ濡れだよ']);
  assert.deepEqual(ch[0].branches.map(b=>b.length),[2,2]);
- assert.equal(ch[0].branches[1][0].who.name,'姫');assert.equal(ch[0].branches[1][1].type,'narr');
- assert.deepEqual(ch[1].branches.map(b=>b.length),[2,3]);
+ assert.equal(ch[0].branches[1][0].who.name,'姫');assert.equal(ch[0].branches[1][1].who.key,'guard');
  // 分岐の中身は本流に混ざらない
- assert.ok(!load('prologue').some(x=>x.type==='say'&&x.text==='待ってて、いま行く！'));
+ assert.ok(!load('prologue').some(x=>x.type==='say'&&x.text==='ありがとう、いただきます！'));
  const [one]=parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@もし 2\nカナン い\nカナン う\n@ここまで\nオリーヴェ え');
  assert.deepEqual(one.options,['はい','いいえ']);assert.deepEqual(one.branches.map(b=>b.length),[1,2]);
  assert.equal(parseScript('@選択 はい|いいえ\n@もし 1\nミラルカ あ\n@ここまで\nオリーヴェ え').length,2)});
 test('{姫}はパーサでは置換しない',()=>{
- const t=flat(load('prologue')).filter(x=>x.type==='say'&&x.text.includes('{姫}'));
+ const t=flat(load('prologue')).filter(x=>(x.type==='say'||x.type==='narr')&&x.text.includes('{姫}'));
  assert.ok(t.length>=1);assert.ok(flat(load('interlude-lamp')).some(x=>x.type==='say'&&x.text.includes('{姫}')))});
 test('話者「姫」・@姿・@名前入力',()=>{
  const [h]=parseScript('姫［驚き］えっ');assert.equal(h.who.key,'hero');assert.equal(h.who.name,'姫');assert.equal(h.who.art,'hero');
@@ -63,8 +62,8 @@ test('名前の解決：短縮形も表示名も同じ人物、未知の名前�
  const [s]=parseScript('見張り［驚き］敵だ！');assert.equal(s.who.name,'見張り');assert.equal(s.who.art,null)});
 test('プロローグの台詞：話者・感情・動き',()=>{
  const say=load('prologue').filter(x=>x.type==='say');
- assert.equal(say[0].who.key,'hero');assert.equal(say[0].emotion,'喜び');assert.equal(say[0].motion,'跳ねる');assert.equal(say[0].symbol.text,'♪');
- const m=say.find(x=>x.text.startsWith('寝てたんじゃない'));assert.equal(m.who.name,'ミラルカ');assert.equal(m.emotion,'得意');assert.equal(m.motion,null);assert.equal(m.symbol.text,'✦')});
+ assert.equal(say[0].who.key,'hero');assert.equal(say[0].emotion,'驚き');assert.equal(say[0].motion,'身を引く');assert.equal(say[0].symbol.text,'！？');
+ const m=say.find(x=>x.text.startsWith('灯台守さん、いらっしゃいますか'));assert.equal(m.who.name,'盾持ちオリーヴェ');assert.equal(m.emotion,'静か');assert.equal(m.motion,null);assert.equal(m.symbol,null)});
 test('感情だけなら既定の動きが付く',()=>{
  const m=(t)=>parseScript(`ミラルカ［${t}］あ`)[0];
  assert.equal(m('喜び').motion,'跳ねる');assert.equal(m('驚き').motion,'身を引く');assert.equal(m('怒り').motion,'揺れる');
@@ -98,7 +97,7 @@ test('@見出し：見出しと副題（全角｜・半角|・副題なし）、
  assert.equal(c[3].type,'warn');assert.equal(c[0].line,1)});
 test('4つの台本は、同時に立つ立ち絵が3人までで、@転換（見出し・札つき）から始まる',()=>{
  for(const n of ['prologue','join-kanaan','contact-nephilim','interlude-lamp']){
-  const s=load(n);assert.equal(s[0].type,'trans',n+' の最初が @転換');assert.ok(s[0].title&&s[0].sub&&s[0].tag,n);
+  const s=load(n),t0=n==='prologue'?s.find(x=>x.type==='trans'):s[0];assert.equal(t0.type,'trans',n+' の最初が @転換（プロローグは夢の後の最初の場面）');assert.ok(t0.title&&t0.sub&&t0.tag,n);
   const walk=(cmds,on)=>{let saved=null;for(const x of cmds){if(x.type==='brief'){if(x.on){saved=new Set(on);on.clear()}else{on.clear();for(const k of saved||[])on.add(k)}}
    if(x.type==='trans')on.clear();if(x.type==='enter')on.add(x.who.key);else if(x.type==='exit')on.delete(x.who.key);assert.ok(on.size<=3,`${n} ${x.line}行目で4人以上`);if(x.type==='choice')x.branches.forEach(b=>walk(b,new Set(on)))}};walk(s,new Set());
   const br=s.filter(x=>x.type==='brief');assert.equal(br.length%2,0,n+' の @説明 は開始と終了が対');br.forEach((x,i)=>assert.equal(x.on,i%2===0,n))}});
@@ -115,4 +114,7 @@ test('@空気：潮風・夜の港・地鳴り・なし、未知は警告',()=>{
  const c=parseScript('@空気 潮風\n@空気 夜の港\n@空気 地鳴り\n@空気 なし\n@空気 洞窟\n@空気');
  assert.deepEqual(c.slice(0,4).map(x=>[x.type,x.name]),[['air','sea'],['air','harbor'],['air','rumble'],['air',null]]);
  assert.deepEqual(c.slice(4).map(x=>x.type),['warn','warn'])});
+test('@空気 嵐／@音 雷：パースされ警告が出ない',()=>{
+ const c=parseScript('@空気 嵐\n@音 雷\n@演出 閃光\n@空気 なし');
+ assert.deepEqual(c.map(x=>x.type),['air','sfx','fx','air']);assert.deepEqual([c[0].name,c[1].name],['storm','thunder'])});
 console.log(`story: ${tests.length} tests passed`);

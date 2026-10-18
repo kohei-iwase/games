@@ -85,6 +85,8 @@ export function createAudio(){
   'sym-anger'(t){tone('triangle',320,t,.12,.06,{sweep:200,decay:true});tone('triangle',260,t+.1,.1,.05,{sweep:170,decay:true})},
   'sym-shy'(t){tone('sine',880,t,.1,.04,{decay:true});tone('sine',1175,t+.09,.16,.04,{decay:true})},
   'sym-proud'(t){tone('sine',1568,t,.3,.04,{decay:true});tone('sine',2093,t+.07,.3,.035,{decay:true})},
+  thunder(t){noise(t,.12,.7,{type:'highpass',freq:3000,sweep:1200,attack:.002});noise(t,.5,.5,{freq:3200,sweep:300,attack:.003});tone('sine',70,t+.04,1.5,.55,{sweep:28,decay:true,attack:.03});noise(t+.08,1.5,.55,{freq:260,sweep:60,attack:.1,q:.8})}, // 落雷：鋭い破裂と低い轟き（約1.5秒）
+  storm(t){noise(t,.25,.3,{type:'highpass',freq:2500,sweep:1000,attack:.003,o:airCur?.g});noise(t+.15,2.4,.5,{freq:200,sweep:50,attack:.5,q:.8,o:airCur?.g});tone('sine',55,t+.2,2,.3,{sweep:30,decay:true,attack:.4,o:airCur?.g})}, // 嵐の閃光に合わせた雷鳴（空気の音量に従い、空気と一緒に止まる）
   rumble(t){noise(t,1.2,.5,{freq:140,sweep:60,attack:.15,o:airCur?.g});tone('sine',48,t,.9,.3,{sweep:30,decay:true,o:airCur?.g})}}; // 地鳴りの揺れに合わせた低い響き
  // 会話の環境音（@空気）。bus.air に鳴らして、会話が終わるか @空気 なし で止める。音量設定・ミュートは master に従う。
  function loopNoise(g,type,freq,q,gain,rate){const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),v=ctx.createGain(),l=ctx.createOscillator(),d=ctx.createGain();s.buffer=noiseBuf;s.loop=true;f.type=type;f.frequency.value=freq;f.Q.value=q;v.gain.value=gain*.6;l.frequency.value=rate;d.gain.value=gain*.4;l.connect(d);d.connect(v.gain);s.connect(f);f.connect(v);v.connect(g);s.start(t0(),Math.random());l.start();return [s,l]}
@@ -94,6 +96,8 @@ export function createAudio(){
   harbor:g=>{const nodes=loopNoise(g,'lowpass',380,.7,.3,.08),k=()=>{if(!ctx||ctx.state!=='running')return;const t=t0()+.05;for(const d of [0,.46])tone('sine',540-d*60,t+d,.13,.05,{sweep:380,decay:true,lp:1700,o:g});noise(t,.05,.02,{type:'bandpass',freq:900,q:1,o:g})};return {nodes,timer:setInterval(k,3600),first:setTimeout(k,900)}}, // 遠い槌音と小さな波音
   rumble:g=>{const nodes=[...loopNoise(g,'lowpass',90,.8,1.1,.14),...loopNoise(g,'bandpass',260,1.2,.12,.05)],o=ctx.createOscillator(),v=ctx.createGain(),l=ctx.createOscillator(),d=ctx.createGain();o.type='sine';o.frequency.value=41;v.gain.value=.16;l.frequency.value=.2;d.gain.value=.08;l.connect(d);d.connect(v.gain);o.connect(v);v.connect(g);o.start();l.start();nodes.push(o,l);
    const k=()=>{if(!ctx||ctx.state!=='running'||Math.random()<.35)return;tone('sine',1800+Math.random()*900,t0()+.02,.1,.025,{sweep:900,decay:true,o:g})};return {nodes,timer:setInterval(k,900)}} // 低い地鳴りと、時々したたる水滴
+ ,
+  storm:g=>{const nodes=[...loopNoise(g,'bandpass',3200,.5,.5,.3),...loopNoise(g,'highpass',6500,.4,.12,.17),...loopNoise(g,'lowpass',320,.7,.22,.1)],k=()=>{if(!ctx||ctx.state!=='running'||Math.random()<.4)return;const t=t0()+.05;noise(t,2.8,.4,{freq:140,sweep:45,attack:.7,q:.8,o:g});tone('sine',46,t+.2,2.2,.18,{sweep:30,decay:true,attack:.6,o:g})};return {nodes,timer:setInterval(k,8000),first:setTimeout(k,3000)}} // ざーっという雨音と、ときどきの遠雷
  };
  function airStop(){if(!airCur)return;const c=airCur;airCur=null;clearInterval(c.timer);clearTimeout(c.first);const n=t0();c.g.gain.cancelScheduledValues(n);c.g.gain.setValueAtTime(c.g.gain.value,n);c.g.gain.linearRampToValueAtTime(0,n+.8);setTimeout(()=>{for(const x of c.nodes){try{x.stop()}catch{}}c.g.disconnect()},1000)}
  function airStart(){airStop();if(!ctx||!airWant||!AIRS[airWant])return;const g=ctx.createGain(),n=t0();g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(1,n+1.2);g.connect(bus.air);airCur={g,...AIRS[airWant](g)}}
