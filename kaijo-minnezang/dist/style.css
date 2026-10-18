@@ -411,6 +411,8 @@ body[data-talk="on"] .stage>:not(canvas):not(#talk):not(.rotate-hint):not(#rende
 @keyframes wUncover{from{clip-path:polygon(0px 0,300vw 0,300vw 100%,-100vh 100%)}to{clip-path:polygon(calc(100vw + 100vh) 0,300vw 0,300vw 100%,100vw 100%)}}
 /* 背景：入り江の夜・谷。絵が無いときは重ねた下の層（暗くした海の絵）が見える。 */
 .stage.talk-inlet .talk{background:linear-gradient(180deg,transparent 50%,#02030a99),url(./art/bg-inlet-night.jpg) center/cover no-repeat,linear-gradient(#02030acc,#02030acc),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
+.stage.talk-graveyard .talk{background:linear-gradient(180deg,transparent 50%,#02030a99),url(./art/bg-graveyard.jpg) center/cover no-repeat,linear-gradient(#02030acc,#02030acc),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
+.stage.talk-chapel .talk{background:linear-gradient(180deg,transparent 50%,#02030a99),url(./art/bg-chapel.jpg) center/cover no-repeat,linear-gradient(#02030acc,#02030acc),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
 .stage.talk-valley .talk{background:linear-gradient(180deg,transparent 62%,#02030a80),url(./art/bg-valley.jpg) center/cover no-repeat,linear-gradient(#02030ad0,#02030ad0),url(./art/bg-sea.jpg) center/cover no-repeat,#02030a}
 /* 3人目は中央の奥：少し小さく暗く、前の2人より下の層。奥の人が話すと、前の人と溶けて入れ替わる（.melt で透明にし、.jump のあいだに動かす）。 */
 .talk-slot[data-row=back]{z-index:0}.talk-slot[data-row=back].shown .talk-fig{transform:scale(.92);filter:brightness(.55)}

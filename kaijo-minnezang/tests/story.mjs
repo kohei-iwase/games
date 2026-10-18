@@ -107,7 +107,7 @@ test('@転換：背景・見出し・副題・札（省略可）、背景が読�
  const c=parseScript('@転換 谷｜沈みし峰々の沖｜ネフェリム、浮上｜接敵\n@転換 入り江|修繕の夜\n@転換 海\n@転換 空｜見出し\n@転換');
  assert.deepEqual(c.slice(0,3).map(x=>[x.type,x.bg,x.title,x.sub,x.tag]),[['trans','valley','沈みし峰々の沖','ネフェリム、浮上','接敵'],['trans','inlet','修繕の夜','',''],['trans','sea','','','']]);
  assert.deepEqual(c.slice(3).map(x=>x.type),['warn','warn']);
- assert.deepEqual(parseScript('@背景 入り江\n@背景 谷\n@背景 空').map(x=>x.value||x.type),['inlet','valley','warn'])});
+ assert.deepEqual(parseScript('@背景 入り江\n@背景 谷\n@背景 墓地\n@背景 礼拝堂\n@背景 空').map(x=>x.value||x.type),['inlet','valley','graveyard','chapel','warn'])});
 test('@見出しの札（3つ目）',()=>{const [h]=parseScript('@見出し 霧月 18日｜ミオツク島｜夜');assert.deepEqual([h.title,h.sub,h.tag],['霧月 18日','ミオツク島','夜'])});
 test('@説明 開始／終了、それ以外は警告',()=>{
  const c=parseScript('@説明 開始\n＊地の文\n@説明 終了\n@説明 途中\n@説明');

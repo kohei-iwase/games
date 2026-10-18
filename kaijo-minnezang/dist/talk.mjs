@@ -1,9 +1,9 @@
 // 物語パートの会話画面（立ち絵のADV）。story.mjs の命令列を、#talk の DOM に再生する。
-// 背景は .stage に talk-sea／chart／black／inlet／valley を付け、CSS が海の絵（art/bg-sea.jpg）・暗い海の絵・真っ黒・入り江の夜（bg-inlet-night.jpg）・谷（bg-valley.jpg）を敷く。入り江と谷の絵が無ければ暗い海の絵になる。
+// 背景は .stage に talk-sea／chart／black／inlet／valley／graveyard／chapel を付け、CSS が海の絵（art/bg-sea.jpg）・暗い海の絵・真っ黒・入り江の夜（bg-inlet-night.jpg）・谷（bg-valley.jpg）を敷く。入り江と谷の絵が無ければ暗い海の絵になる。
 import {EMOTIONS,MOTIONS,HERO_FACES,DEFAULT_FACE} from './story.mjs';
 import {DEFAULT_HERO_NAME} from './config.mjs';
 const TYPE_MS=34,FX_MS={flash:620,fadeout:1400,fadein:1200,shake:560};
-const SYMBOL_MS=1800,HEADING_MS=2400,WIPE_MS=450,BGS=['sea','chart','black','inlet','valley'],TAG_COLORS={夜:'#3b4aa0',翌朝:'#d08a2c',接敵:'#b01a38',幕間:'#2f7d6e'},FORM_NAMES=['乙女','若人（わこうど）'],FORMS=['female','male'];
+const SYMBOL_MS=1800,HEADING_MS=2400,WIPE_MS=450,BGS=['sea','chart','black','inlet','valley','graveyard','chapel'],TAG_COLORS={夜:'#3b4aa0',翌朝:'#d08a2c',接敵:'#b01a38',幕間:'#2f7d6e'},FORM_NAMES=['乙女','若人（わこうど）'],FORMS=['female','male'];
 // 立ち絵の中心（画面幅の%）。1人のときは中央やや右寄り、2人のときは左右（前列）、3人目は中央の奥（後列）。説明モードの集合絵は最大4人を横に並べて少し重ねる。
 const X_ONE=58,X_LEFT=30,X_RIGHT=72,X_BACK=51,X_GAP=22,AIR_N={sea:30,harbor:26,rumble:34,storm:70},SYM_SFX={sad:'dots',weary:'dots'};
 
