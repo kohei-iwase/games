@@ -18,7 +18,7 @@ export const MOTIONS={跳ねる:'hop',揺れる:'sway',身を引く:'recoil',前
 // 動きを書かなかったときの、感情ごとの既定の動き。
 export const DEFAULT_MOTION={喜び:'跳ねる',驚き:'身を引く',怒り:'揺れる',焦り:'震える'};
 const POSITIONS={左:'left',中:'center',右:'right'},BACKGROUNDS={海:'sea',海図:'chart',暗転:'black',入り江:'inlet',谷:'valley'};
-const AIRS={潮風:'sea',夜の港:'harbor',地鳴り:'rumble',なし:null},EFFECTS={閃光:'flash',暗転:'fadeout',明転:'fadein',揺れ:'shake'},SOUNDS={鐘:'bell',鼓動:'heart',杭:'stake',十字架:'cross',打撃:'hit'};
+const AIRS={潮風:'sea',夜の港:'harbor',地鳴り:'rumble',嵐:'storm',なし:null},EFFECTS={閃光:'flash',暗転:'fadeout',明転:'fadein',揺れ:'shake'},SOUNDS={鐘:'bell',鼓動:'heart',杭:'stake',十字架:'cross',打撃:'hit',雷:'thunder'};
 
 const BY_ALIAS=new Map(Object.values(CHARACTERS).flatMap(c=>c.aliases.map(a=>[a,c])));
 // 名前 → {key,name,art,color,face}。未知の名前は書いたとおりの札だけ（key=null）。
@@ -31,7 +31,7 @@ function speech(raw){const t=raw.trim(),mind=/^（[\s\S]*）$/.test(t);return {t
 
 // 台本のテキスト → 命令の配列。書式の誤りは例外にせず {type:'warn',line,text} として残す（警告は分岐の中のものも最上位に集める）。
 // say{who,text,mind,emotion,motion,symbol} / narr{text} / bg{value} / enter{who,pos} / exit{who} / fx{name} / sfx{name} / wait{sec} / form{value}
-// / heading{title,sub,tag} / trans{bg,title,sub,tag}（場面転換：斜め縞のワイプで背景を替え、見出しがあれば続けて見出しカード）/ brief{on}（説明モード：上下の黒帯と字幕の開始・終了）/ air{name}（name は sea・harbor・rumble、止めるときは null）/ nameinput / choice{options,branches}（branches[i] は選択肢 i+1 を選んだときの命令列）/ warn
+// / heading{title,sub,tag} / trans{bg,title,sub,tag}（場面転換：斜め縞のワイプで背景を替え、見出しがあれば続けて見出しカード）/ brief{on}（説明モード：上下の黒帯と字幕の開始・終了）/ air{name}（name は sea・harbor・rumble・storm、止めるときは null）/ nameinput / choice{options,branches}（branches[i] は選択肢 i+1 を選んだときの命令列）/ warn
 export function parseScript(text){
  const out=[],warn=(line,msg)=>out.push({type:'warn',line,text:msg});
  let sink=out,choice=null,stray=false;// choice=分岐を書いている最中の選択肢、sink=命令の出力先（null は捨てる）
@@ -78,12 +78,12 @@ export function parseScript(text){
      else if(POSITIONS[a[1]])emit({type:'enter',line,who,pos:POSITIONS[a[1]]});
      else warn(line,`未知の位置「${a[1]??''}」（左・中・右）`);break}
     case '演出':if(EFFECTS[a[0]])emit({type:'fx',line,name:EFFECTS[a[0]]});else warn(line,`未知の演出「${a[0]??''}」（閃光・暗転・明転・揺れ）`);break;
-    case '音':if(SOUNDS[a[0]])emit({type:'sfx',line,name:SOUNDS[a[0]]});else warn(line,`未知の効果音「${a[0]??''}」（鐘・鼓動・杭・十字架・打撃）`);break;
+    case '音':if(SOUNDS[a[0]])emit({type:'sfx',line,name:SOUNDS[a[0]]});else warn(line,`未知の効果音「${a[0]??''}」（鐘・鼓動・杭・十字架・打撃・雷）`);break;
     case '間':{const sec=Number(a[0]);if(a[0]!==undefined&&Number.isFinite(sec)&&sec>=0)emit({type:'wait',line,sec});else warn(line,`@間 の秒数が数ではありません「${a[0]??''}」`);break}
     case '見出し':{const [title,sub,tag]=raw.slice(1+cmd.length).split(/[｜|]/).map(t=>t.trim());if(title)emit({type:'heading',line,title,sub:sub||'',tag:tag||''});else warn(line,'@見出し に見出しがありません（見出し｜副題｜札）');break}
     case '転換':{const [bg,title,sub,tag]=raw.slice(1+cmd.length).split(/[｜|]/).map(t=>t.trim());if(BACKGROUNDS[bg])emit({type:'trans',line,bg:BACKGROUNDS[bg],title:title||'',sub:sub||'',tag:tag||''});else warn(line,`@転換 の背景「${bg??''}」が読めません（背景名｜見出し｜副題｜札）`);break}
     case '説明':if(a[0]==='開始'||a[0]==='終了')emit({type:'brief',line,on:a[0]==='開始'});else warn(line,`@説明 は 開始 か 終了 です「${a[0]??''}」`);break;
-    case '空気':if(a[0]in AIRS)emit({type:'air',line,name:AIRS[a[0]]});else warn(line,`未知の空気「${a[0]??''}」（潮風・夜の港・地鳴り・なし）`);break;
+    case '空気':if(a[0]in AIRS)emit({type:'air',line,name:AIRS[a[0]]});else warn(line,`未知の空気「${a[0]??''}」（潮風・夜の港・地鳴り・嵐・なし）`);break;
     case '名前入力':emit({type:'nameinput',line});break;
     case '姿':if(FORMS[a[0]])emit({type:'form',line,value:FORMS[a[0]]});else warn(line,`未知の姿「${a[0]??''}」（人・幻影）`);break;
     default:warn(line,`未知の命令「@${cmd}」`)}}
